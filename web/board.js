@@ -19,7 +19,7 @@ export const hooks = { onBoard: [] };   // Task 9 subscribes the alert banner he
 
 async function poll() {
   try {
-    const r = await fetch("/api/board", { cache: "no-store" });
+    const r = await fetch("/api/board", { cache: "no-store", signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     board = await r.json();
     lastOkMs = Date.now();

@@ -45,3 +45,11 @@ test("alert banner content", () => {
   assert.equal((html.match(/class="chip sm"/g) || []).length, 2);
   assert.match(html, /<span class="atext">Trains every 15 &lt;min&gt;<\/span>/);
 });
+
+test("a non-numeric cars value is escaped", () => {
+  const b = board({ platforms: [{ group: "1", label: "L", trains: [
+    { line: "OR", cars: "<img src=x>", destination: "D", minutes: 3, display: "3" }] }] });
+  const html = arrivalsHtml(b);
+  assert.doesNotMatch(html, /<img/);
+  assert.match(html, /&lt;img src=x&gt; car/);
+});

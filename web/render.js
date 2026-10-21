@@ -9,7 +9,7 @@ export function chip(line, cls = "chip") {
 
 function rowHtml(t) {
   const m = minuteParts(t.display);
-  const cars = t.cars ? `${t.cars} car` : "";
+  const cars = t.cars ? `${escapeHtml(String(t.cars))} car` : "";
   const unit = m.unit ? `<small>${m.unit}</small>` : "";
   return `<div class="row">${chip(t.line)}` +
     `<span class="dest">${escapeHtml(t.destination)}<span class="cars">${cars}</span></span>` +
