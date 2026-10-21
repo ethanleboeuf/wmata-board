@@ -1,1 +1,23 @@
-<!doctype html><title>Court House</title>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Court House</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/board.css">
+</head>
+<body>
+  <div id="stage">
+    <header class="hdr">
+      <span id="station" class="stn">Court House</span>
+      <span class="right"><span id="pill" class="pill" hidden></span><span id="clock" class="clk"></span></span>
+    </header>
+    <div id="alert" class="alert" hidden></div>
+    <main class="split">
+      <div id="arrivals" class="arr"></div>
+      <div id="map" class="mapbox"></div>
+    </main>
+  </div>
+  <script type="module" src="/static/board.js"></script>
+</body>
+</html>

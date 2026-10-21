@@ -1,0 +1,38 @@
+@font-face { font-family: Inter; font-weight: 500; src: url(fonts/inter-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 600; src: url(fonts/inter-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2) format("woff2"); }
+
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0;
+         container-type: inline-size; background: #0d1117; font-family: Inter, Helvetica, Arial, sans-serif;
+         color: #f2f4f7; display: flex; flex-direction: column; }
+#stage * { box-sizing: border-box; }
+
+.hdr { display: flex; justify-content: space-between; align-items: baseline;
+       border-bottom: .2cqw solid #2a313c; padding: 1.6cqw 3.2cqw .9cqw; }
+.stn { font-size: 3.2cqw; font-weight: 800; }
+.right { display: flex; align-items: baseline; gap: 1.4cqw; }
+.clk { font-size: 2.6cqw; font-weight: 600; color: #aab3c0; font-variant-numeric: tabular-nums; }
+.pill { font-size: 1.25cqw; font-weight: 700; padding: .35cqw 1cqw; border-radius: 99px; align-self: center; }
+.pill.amber { background: #3a2e10; color: #ffd166; border: .1cqw solid #ffd166; }
+.pill.red { background: #3a1214; color: #ff6b6b; border: .1cqw solid #ff6b6b; }
+
+.split { flex: 1; display: grid; grid-template-columns: 54% 46%; min-height: 0; }
+.arr { padding: 0 2.4cqw 0 3.2cqw; overflow: hidden; }
+.plat h2 { font-size: 1.45cqw; font-weight: 700; color: #8b95a3; letter-spacing: .3cqw; text-transform: uppercase;
+           margin: 1.6cqw 0 .3cqw; white-space: nowrap; }
+.row { display: grid; grid-template-columns: 5.6cqw 1fr 10cqw; align-items: center;
+       border-bottom: .1cqw solid #1c222b; height: 6.6cqw; }
+.row:last-child { border-bottom: none; }
+.row.empty { display: block; height: auto; padding: 1.4cqw 0; font-size: 1.8cqw; font-weight: 600; color: #5d6875; }
+.chip { width: 4.2cqw; height: 4.2cqw; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 1.7cqw; font-weight: 800; }
+.dest { font-weight: 700; font-size: 2.9cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cars { font-size: 1.4cqw; font-weight: 600; color: #7d8794; display: block; }
+.min { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 3.8cqw; }
+.min small { font-size: 1.6cqw; font-weight: 600; color: #8b95a3; margin-left: .4cqw; }
+.min.now { color: #ffd166; }
+.notice { margin-top: 6cqw; font-size: 2.6cqw; font-weight: 700; color: #aab3c0; line-height: 1.35; }
+
+.mapbox { position: relative; border-left: .2cqw solid #1c222b; overflow: hidden; background: #0f151d; }
