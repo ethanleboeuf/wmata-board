@@ -97,3 +97,21 @@ def test_incidents_never_fetched():
     b = board(incidents=FeedState())
     assert b["alerts"] == []
     assert b["freshness"]["incidents"]["age_s"] is None
+
+
+def test_bad_key_after_good_data():
+    # key rejected mid-run: once the last good value is > 60 s old, say so
+    b = board(arrivals=arrivals_state(error="401", error_kind="api_key"), now=100.0 + 61)
+    assert b["notice"] == NOTICE_BAD_KEY
+    assert all(p["trains"] == [] for p in b["platforms"])
+
+
+def test_fresh_value_with_just_failed_api_key_fetch_still_shows_trains():
+    b = board(arrivals=arrivals_state(error="401", error_kind="api_key"), now=100.0 + 30)
+    assert b["notice"] is None
+    assert b["platforms"][0]["trains"]
+
+
+def test_alerts_dropped_when_incident_feed_older_than_15_min():
+    assert board(incidents=incidents_state(), now=100.0 + 899)["alerts"]
+    assert board(incidents=incidents_state(), now=100.0 + 901)["alerts"] == []

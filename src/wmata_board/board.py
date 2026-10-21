@@ -18,6 +18,7 @@ from .wmata import WmataError
 STALE_AFTER_S = 60.0
 INCIDENTS_STALE_AFTER_S = 180.0
 UNAVAILABLE_AFTER_S = 600.0
+INCIDENTS_EXPIRE_AFTER_S = 900.0
 
 NOTICE_NO_KEY = "No WMATA API key configured"
 NOTICE_BAD_KEY = "WMATA rejected the API key"
@@ -46,9 +47,10 @@ def _notice(config: Config, arrivals: FeedState, age: float | None, has_trains: 
             service: ServiceStatus | None) -> str | None:
     if config.api_key is None:
         return NOTICE_NO_KEY
+    rejected = arrivals.error_kind == "api_key"
+    if rejected and (arrivals.value is None or (age is not None and age > STALE_AFTER_S)):
+        return NOTICE_BAD_KEY
     if arrivals.value is None:
-        if arrivals.error_kind == "api_key":
-            return NOTICE_BAD_KEY
         return NOTICE_UNAVAILABLE if arrivals.error else NOTICE_LOADING
     if age is not None and age > UNAVAILABLE_AFTER_S:
         return NOTICE_UNAVAILABLE
@@ -72,7 +74,9 @@ def build_board(*, config: Config, arrivals: FeedState, incidents: FeedState, st
 
     platforms = platforms_for(trains, code, config.platforms.get(code, {}),
                               config.board.rows_per_direction)
-    alerts = alerts_for(incidents.value or [], lines)
+    incidents_age = incidents.age(now)
+    expired = incidents_age is not None and incidents_age > INCIDENTS_EXPIRE_AFTER_S
+    alerts = [] if expired else alerts_for(incidents.value or [], lines)
 
     return {
         "station": {"code": code, "name": info.name if info else code},
