@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { arrivalsHtml, chip } from "../../web/render.js";
+import { arrivalsHtml, chip, alertHtml } from "../../web/render.js";
 
 const board = (over = {}) => ({
   notice: null,
@@ -37,4 +37,11 @@ test("notice replaces the rows", () => {
 test("chip uses line colors", () => {
   assert.equal(chip("OR"), '<span class="chip" style="background:#ed8b00;color:#111">OR</span>');
   assert.match(chip("ZZ"), /background:#3b4a5e/);
+});
+
+test("alert banner content", () => {
+  const html = alertHtml({ id: "1", lines: ["OR", "SV"], text: "Trains every 15 <min>", updated: "" });
+  assert.match(html, /<span class="tag">ALERT<\/span>/);
+  assert.equal((html.match(/class="chip sm"/g) || []).length, 2);
+  assert.match(html, /<span class="atext">Trains every 15 &lt;min&gt;<\/span>/);
 });

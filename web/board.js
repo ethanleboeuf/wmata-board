@@ -1,6 +1,6 @@
 // Wall board: polls /api/board, renders arrivals, ticks the clock and pill.
-import { formatClock, pillState } from "./format.js";
-import { arrivalsHtml } from "./render.js";
+import { formatClock, pillState, alertIndex } from "./format.js";
+import { arrivalsHtml, alertHtml } from "./render.js";
 
 const POLL_MS = 5000;
 const $ = id => document.getElementById(id);
@@ -48,6 +48,21 @@ function tick() {
   pill.hidden = p.kind === "hidden";
   pill.className = `pill ${p.kind}`;
   pill.textContent = p.text;
+  renderAlert();
+}
+
+let alerts = [], shownKey = null;
+hooks.onBoard.push(b => { alerts = b.alerts || []; renderAlert(); });
+
+// Several alerts rotate every 10 s; none -> no banner and the panels below
+// reclaim the space (the map panel re-fits itself via its ResizeObserver).
+function renderAlert() {
+  const banner = $("alert");
+  const i = alertIndex(alerts.length, Date.now());
+  if (i < 0) { banner.hidden = true; shownKey = null; return; }
+  const a = alerts[i], key = `${a.id}|${a.updated}|${a.text}`;
+  if (key !== shownKey) { banner.innerHTML = alertHtml(a); shownKey = key; }
+  banner.hidden = false;
 }
 
 setInterval(tick, 1000);

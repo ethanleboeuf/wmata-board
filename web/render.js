@@ -23,3 +23,9 @@ export function arrivalsHtml(board) {
     (p.trains.length ? p.trains.map(rowHtml).join("") : `<div class="row empty">No trains predicted</div>`) +
     `</section>`).join("");
 }
+
+export function alertHtml(alert) {
+  return `<span class="tag">ALERT</span>` +
+    `<span class="achips">${alert.lines.map(l => chip(l, "chip sm")).join("")}</span>` +
+    `<span class="atext">${escapeHtml(alert.text)}</span>`;
+}

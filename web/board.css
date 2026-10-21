@@ -36,3 +36,16 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .notice { margin-top: 6cqw; font-size: 2.6cqw; font-weight: 700; color: #aab3c0; line-height: 1.35; }
 
 .mapbox { position: relative; border-left: .2cqw solid #1c222b; overflow: hidden; background: #0f151d; }
+
+.alert { display: flex; align-items: center; gap: 1.2cqw; background: #f5a623; color: #111;
+         padding: .9cqw 3.2cqw; }
+.alert[hidden] { display: none; }
+.alert .tag { background: #111; color: #f5a623; font-weight: 800; font-size: 1.2cqw; letter-spacing: .25cqw;
+              padding: .35cqw .8cqw; border-radius: .4cqw; flex: none; }
+.alert .achips { display: flex; gap: .5cqw; flex: none; }
+.chip.sm { width: 2.4cqw; height: 2.4cqw; font-size: 1cqw; }
+.alert .atext { font-size: 1.6cqw; font-weight: 700; line-height: 1.3; display: -webkit-box;
+                -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* With the banner up (up to two lines tall) the six rows need a little less
+   height to keep every row on the 1080 px stage. */
+.alert:not([hidden]) ~ .split .row:not(.empty) { height: 5.8cqw; }
