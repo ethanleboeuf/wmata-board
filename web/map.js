@@ -1,0 +1,239 @@
+// Shared map: MapLibre draws only the Board-navy basemap; an SVG overlay on
+// top draws lanes, stations, labels, landmarks and gliding trains, re-projected
+// with map.project() on every move so the wall and the phone share this file.
+import { LINE_COLORS, LINE_LETTER, escapeHtml } from "./format.js";
+import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
+         mercator, unmercator, Glider } from "./track.js";
+
+const NS = "http://www.w3.org/2000/svg";
+const LW = 7;
+const LANE = { RD: 0, OR: -0.5, SV: 0.5, BL: 1.5, GR: -0.5, YL: 0.5 };
+const ORDER = ["RD", "GR", "YL", "BL", "OR", "SV"];
+const DARK_TEXT = new Set(["OR", "SV", "YL"]);
+const LAND = "#0f151d";
+const POSITIONS_MS = 5000;
+// Hand-tuned label placement from the approved prototype: [dx, dy, anchor, name].
+const LABEL_HINTS = {
+  K04: [0, 30, "middle", "Ballston"], K02: [0, 30, "middle"], C05: [16, -12, "start"],
+  C04: [0, -18, "middle", "Foggy Bottom"], C01: [-16, 28, "end", "Metro Center"],
+  D03: [16, 28, "start", "L'Enfant Plaza"], B03: [0, 30, "middle", "Union Station"],
+  A03: [-16, -4, "end", "Dupont Circle"], C07: [16, 6, "start", "Pentagon"],
+  F05: [14, 22, "start", "Navy Yard"], B05: [-16, 5, "end", "Brookland"],
+};
+
+const svgEl = (tag, attrs = {}) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+};
+
+async function getJson(url) {
+  for (let delay = 1000; ; delay = Math.min(delay * 2, 30000)) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (r.ok) return await r.json();
+    } catch (err) { /* retry */ }
+    await new Promise(res => setTimeout(res, delay));
+  }
+}
+
+async function loadStyle() {
+  const style = await getJson("/static/style.json");
+  let haveBasemap = false;
+  try { haveBasemap = (await fetch("/basemap.pmtiles", { method: "HEAD" })).ok; } catch (err) { /* offline */ }
+  if (haveBasemap) {
+    style.sources.protomaps.url = `pmtiles://${location.origin}/basemap.pmtiles`;
+  } else {
+    // Review focus 5: no basemap yet -> keep the land-colored background only.
+    console.warn("basemap.pmtiles missing; drawing the overlay on plain land");
+    delete style.sources.protomaps;
+    style.layers = style.layers.filter(l => l.type === "background");
+  }
+  return style;
+}
+
+function badge(line) {
+  const c = (LINE_COLORS[line] || ["#888"])[0];
+  return `<circle r="16" fill="url(#glow-${line})"/>` +
+    `<circle r="10.5" fill="${c}" stroke="#fff" stroke-width="2"/>` +
+    `<text y="4.6" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="13" ` +
+    `fill="${DARK_TEXT.has(line) ? "#111" : "#fff"}">${LINE_LETTER[line] || "?"}</text>` +
+    `<path class="dir" d="M15,-4 L21,0 L15,4 Z" fill="#fff"/>`;
+}
+
+export async function createMap(el, { interactive = false, fit = "cover" } = {}) {
+  const [net, style] = await Promise.all([getJson("/api/network"), loadStyle()]);
+  if (!window.__pmtilesProtocol) {
+    window.__pmtilesProtocol = new pmtiles.Protocol();
+    maplibregl.addProtocol("pmtiles", window.__pmtilesProtocol.tile);
+  }
+  const [w, s, e, n] = net.view.bbox;
+  const start = fit === "cover" ? coverView(net.view.bbox, el.clientWidth, el.clientHeight) : null;
+  const map = new maplibregl.Map({
+    container: el, style, interactive, attributionControl: false, fadeDuration: 0,
+    ...(start ? { center: start.center, zoom: start.zoom } : { bounds: [[w, s], [e, n]] }),
+    dragRotate: false, pitchWithRotate: false, touchPitch: false,
+  });
+  map.addControl(new maplibregl.AttributionControl({ compact: false }), "bottom-right");
+  if (interactive) map.touchZoomRotate.disableRotation();
+
+  const tracks = Object.fromEntries(Object.entries(net.lines).map(([k, v]) => [k, buildTrack(v)]));
+  const home = net.stations.find(st => st.codes.includes(net.home));
+
+  // ---- SVG overlay ----
+  const svg = svgEl("svg", { class: "overlay" });
+  svg.innerHTML = `<defs>${ORDER.map(l => `<radialGradient id="glow-${l}">` +
+    `<stop offset="0" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0.7"/>` +
+    `<stop offset="0.45" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0.28"/>` +
+    `<stop offset="1" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0"/></radialGradient>`).join("")}` +
+    `<radialGradient id="hosp"><stop offset="0" stop-color="#ff8a9b" stop-opacity=".55"/>` +
+    `<stop offset="1" stop-color="#ff8a9b" stop-opacity="0"/></radialGradient></defs>` +
+    `<g class="static"></g><g class="trains"></g>` +
+    `<text class="live" x="24" y="44"><tspan fill="#3ddc84">●</tspan> LIVE · <tspan class="count">0</tspan> TRAINS</text>`;
+  el.appendChild(svg);
+  const pulse = document.createElement("div");
+  pulse.className = "pulse";
+  el.appendChild(pulse);
+  const gStatic = svg.querySelector(".static"), gTrains = svg.querySelector(".trains");
+  const countEl = svg.querySelector(".count");
+
+  const project = (lon, lat) => { const p = map.project([lon, lat]); return [p.x, p.y]; };
+  const pl = pts => pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+
+  function drawStatic() {
+    const W = el.clientWidth, H = el.clientHeight, out = [];
+    for (const p of net.places) {
+      const [x, y] = project(p.lon, p.lat);
+      out.push(`<text class="place" x="${x.toFixed(0)}" y="${y.toFixed(0)}" text-anchor="middle">${escapeHtml(p.name)}</text>`);
+    }
+    const lanes = ORDER.filter(l => net.lines[l]).map(l =>
+      [l, laneOffset(net.lines[l].map(([lon, lat]) => project(lon, lat)), LANE[l] * LW)]);
+    out.push(`<g fill="none" stroke-linecap="round" stroke-linejoin="round">`);
+    for (const [, pts] of lanes) out.push(`<polyline points="${pl(pts)}" stroke="#0a0e14" stroke-width="${LW + 5}"/>`);
+    for (const [l, pts] of lanes) out.push(`<polyline points="${pl(pts)}" stroke="${LINE_COLORS[l][0]}" stroke-width="${LW}"/>`);
+    out.push(`</g>`);
+    for (const st of net.stations) {
+      if (st === home) continue;
+      const [x, y] = project(st.lon, st.lat);
+      if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${st.transfer ? 6.2 : 3.8}" fill="${LAND}" ` +
+               `stroke="#cfd8e3" stroke-width="${st.transfer ? 2.6 : 2}"/>`);
+    }
+    out.push(`<g class="labels">`);
+    for (const code of net.labels) {
+      const st = net.stations.find(x => x.codes.includes(code));
+      if (!st) continue;
+      const [dx, dy, anchor, name] = LABEL_HINTS[code] || [0, 26, "middle"];
+      const [x, y] = project(st.lon, st.lat);
+      out.push(`<text x="${(x + dx).toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}">${escapeHtml((name || st.name).toUpperCase())}</text>`);
+    }
+    out.push(`</g>`);
+    for (const lm of net.landmarks) {
+      const [x, y] = project(lm.lon, lm.lat);
+      const [first, ...rest] = lm.name.toUpperCase().split(" ");
+      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="26" fill="url(#hosp)"/>` +
+        `<rect x="${(x - 11).toFixed(1)}" y="${(y - 11).toFixed(1)}" width="22" height="22" rx="6" fill="#ff8a9b" stroke="${LAND}" stroke-width="2.5"/>` +
+        `<path d="M${x.toFixed(1)},${(y - 6).toFixed(1)} V${(y + 6).toFixed(1)} M${(x - 6).toFixed(1)},${y.toFixed(1)} H${(x + 6).toFixed(1)}" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>` +
+        `<g class="landmark"><text x="${x.toFixed(1)}" y="${(y + 31).toFixed(1)}">${escapeHtml(first)}</text>` +
+        (rest.length ? `<text x="${x.toFixed(1)}" y="${(y + 47).toFixed(1)}">${escapeHtml(rest.join(" "))}</text>` : "") + `</g>`);
+    }
+    if (home) {
+      const [x, y] = project(home.lon, home.lat);
+      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" fill="${LAND}" stroke="#fff" stroke-width="3.5"/>` +
+        `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#fff"/>` +
+        `<text class="home" x="${(x - 18).toFixed(1)}" y="${(y - 22).toFixed(1)}" text-anchor="end">${escapeHtml(home.name.toUpperCase())}</text>`);
+      pulse.style.left = `${x}px`;
+      pulse.style.top = `${y}px`;
+    }
+    gStatic.innerHTML = out.join("");
+  }
+
+  // ---- trains ----
+  const glider = new Glider();
+  const els = new Map();
+  let stale = true;
+
+  async function pollPositions() {
+    try {
+      const r = await fetch("/api/positions", { cache: "no-store" });
+      if (r.ok) {
+        const body = await r.json();
+        stale = body.stale;
+        gTrains.classList.toggle("faded", stale);
+        if (body.feed_timestamp !== null) {
+          const vs = [];
+          for (const v of body.vehicles) {
+            const track = tracks[v.line];
+            if (!track) continue;
+            const { s } = snapToTrack(track, mercator(v.lon, v.lat));
+            vs.push({ id: v.id, line: v.line, s, dir: headingSign(track, s, v.heading) });
+          }
+          glider.update(vs, body.feed_timestamp, performance.now());
+        }
+      }
+    } catch (err) { /* keep gliding what we have; fades when stale */ }
+    setTimeout(pollPositions, POSITIONS_MS);
+  }
+
+  function screenAt(line, s) {
+    const track = tracks[line];
+    const p = pointAt(track, s), q = pointAt(track, s + 1e-7);
+    const [x, y] = project(...unmercator(p.x, p.y));
+    let [x2, y2] = project(...unmercator(q.x, q.y));
+    if (Math.hypot(x2 - x, y2 - y) < 1e-6) { x2 = x + p.dx; y2 = y + p.dy; }
+    const dx = x2 - x, dy = y2 - y, l = Math.hypot(dx, dy) || 1;
+    const off = LANE[line] * LW;
+    return [x - dy / l * off, y + dx / l * off, Math.atan2(dy, dx)];
+  }
+
+  let lastFrame = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (now - lastFrame < 33) return;           // ~30 fps is plenty, and kind to the Pi
+    lastFrame = now;
+    const W = el.clientWidth, H = el.clientHeight, seen = new Set();
+    let visible = 0;
+    for (const v of glider.at(now)) {
+      let e = els.get(v.id);
+      if (!e || e.line !== v.line) {
+        e?.g.remove();
+        const g = svgEl("g");
+        g.innerHTML = badge(v.line);
+        gTrains.appendChild(g);
+        e = { g, dir: g.querySelector(".dir"), line: v.line };
+        els.set(v.id, e);
+      }
+      const [x, y, ang] = screenAt(v.line, v.s);
+      const deg = ang * 180 / Math.PI + (v.dir < 0 ? 180 : 0);
+      e.g.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+      e.dir.setAttribute("transform", `rotate(${deg.toFixed(0)})`);
+      e.g.style.opacity = v.opacity.toFixed(2);
+      if (x > 0 && y > 0 && x < W && y < H && v.opacity > 0.5) visible++;
+      seen.add(v.id);
+    }
+    for (const [id, e] of els) if (!seen.has(id)) { e.g.remove(); els.delete(id); }
+    countEl.textContent = stale ? "0" : String(visible);
+  }
+
+  function refit() {
+    if (fit !== "cover") return;
+    const v = coverView(net.view.bbox, el.clientWidth, el.clientHeight);
+    map.jumpTo({ center: v.center, zoom: v.zoom });
+  }
+  const ro = new ResizeObserver(() => { map.resize(); refit(); drawStatic(); });
+  ro.observe(el);
+  map.on("move", drawStatic);
+  map.on("load", drawStatic);
+  drawStatic();
+  pollPositions();
+  requestAnimationFrame(frame);
+
+  return {
+    map,
+    recenter() {
+      if (fit === "cover") refit();
+      else map.fitBounds([[w, s], [e, n]], { duration: 600 });
+    },
+    destroy() { ro.disconnect(); map.remove(); },
+  };
+}

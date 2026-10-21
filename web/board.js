@@ -1,6 +1,7 @@
 // Wall board: polls /api/board, renders arrivals, ticks the clock and pill.
 import { formatClock, pillState, alertIndex } from "./format.js";
 import { arrivalsHtml, alertHtml } from "./render.js";
+import { createMap } from "./map.js";
 
 const POLL_MS = 5000;
 const $ = id => document.getElementById(id);
@@ -68,3 +69,4 @@ function renderAlert() {
 setInterval(tick, 1000);
 tick();
 poll();
+createMap($("map"), { interactive: false, fit: "cover" }).catch(err => console.error("map failed", err));
