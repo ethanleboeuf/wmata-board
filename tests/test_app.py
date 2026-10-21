@@ -264,3 +264,15 @@ def test_commute_evening_preview(commute_app):
 def test_commute_rejects_bad_preview_params(commute_app, query):
     with TestClient(commute_app) as c:
         assert c.get(f"/api/commute?{query}").status_code == 422
+
+
+def test_phone_page_is_installable(app):
+    with TestClient(app) as c:
+        r = c.get("/manifest.webmanifest")
+        page = c.get("/phone").text
+        icons = [c.get(i["src"]) for i in r.json()["icons"]]
+    assert r.headers["content-type"].startswith("application/manifest+json")
+    assert r.json()["start_url"] == "/phone" and r.json()["display"] == "standalone"
+    assert all(i.status_code == 200 and i.content[:4] == b"\x89PNG" for i in icons)
+    assert 'rel="manifest" href="/manifest.webmanifest"' in page
+    assert 'rel="apple-touch-icon" href="/static/icons/icon-180.png"' in page

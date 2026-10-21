@@ -197,5 +197,12 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     async def phone():
         return FileResponse(WEB_DIR / "phone.html", headers=NO_STORE)
 
+    @app.get("/manifest.webmanifest")
+    async def manifest():
+        """Home-screen install for the phone page. Served with an explicit type:
+        Windows' mimetype table doesn't know .webmanifest."""
+        return FileResponse(WEB_DIR / "manifest.webmanifest", media_type="application/manifest+json",
+                            headers=NO_STORE)
+
     app.mount("/static", _NoStoreStaticFiles(directory=WEB_DIR), name="static")
     return app
