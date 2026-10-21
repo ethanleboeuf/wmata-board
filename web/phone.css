@@ -30,3 +30,16 @@ body.phone * { box-sizing: border-box; }
 .palerts .tag { font-size: 11px; padding: 3px 7px; }
 .palerts .chip.sm { width: 22px; height: 22px; font-size: 10px; }
 .palerts .atext { font-size: 14px; -webkit-line-clamp: unset; display: block; flex-basis: 100%; }
+.phone .commute h2 { font-size: 12px; letter-spacing: 2px; margin: 14px 0 4px; white-space: normal; line-height: 1.4; }
+.phone .crow { height: 46px; column-gap: 6px; }
+.phone .crow.am { grid-template-columns: 28px 46px 1fr 44px 62px 40px; }
+.phone .crow.pm { grid-template-columns: 46px 44px 1fr 26px 46px 40px; }
+.phone .crow.pm.station { grid-template-columns: 46px 1fr 26px 46px 40px; }
+.phone .crow .chip { width: 26px; height: 26px; font-size: 11px; }
+.phone .crow.chead { height: auto; font-size: 9px; letter-spacing: .5px; padding-bottom: 3px; }
+.phone .crow.cempty { font-size: 15px; padding: 10px 0; }
+.phone .ct, .phone .cw, .phone .cs { font-size: 17px; }
+.phone .cw small, .phone .cs small { font-size: 10px; margin-left: 2px; }
+.phone .sched { font-size: 8px; letter-spacing: .5px; padding: 1px 3px; border-width: 1px; border-radius: 4px; }
+.phone .ctabs { gap: 8px; margin: 2px 0 8px; }
+.phone .ctab { font-size: 13px; padding: 6px 14px; border-width: 1px; min-height: 32px; }

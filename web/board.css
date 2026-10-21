@@ -69,3 +69,40 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 @keyframes pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }
 .maplibregl-ctrl-attrib { background: transparent !important; font: 11px Inter, sans-serif; }
 .maplibregl-ctrl-attrib a { color: #4d5866 !important; }
+
+/* Commute panel (mornings on the wall, in place of the westbound list). */
+.commute h2 { font-size: 1.45cqw; font-weight: 700; color: #f7c3cc; letter-spacing: .3cqw; text-transform: uppercase;
+              margin: 1.6cqw 0 .3cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow { display: grid; align-items: center; border-bottom: .1cqw solid #1c222b; height: 4cqw;
+        font-variant-numeric: tabular-nums; }
+.crow:last-child { border-bottom: none; }
+.crow.am { grid-template-columns: 4.4cqw 8.6cqw 1fr 9cqw 11.4cqw 4.6cqw; }
+.crow.pm { grid-template-columns: 8.6cqw 8cqw 1fr 4.4cqw 8cqw 4.6cqw; }
+.crow.pm.station { grid-template-columns: 8.6cqw 1fr 4.4cqw 8cqw 4.6cqw; }
+.crow .chip { width: 3.2cqw; height: 3.2cqw; font-size: 1.3cqw; }
+.crow.chead .r { text-align: right; }
+.crow.chead { height: auto; padding-bottom: .3cqw; white-space: nowrap; font-size: 1cqw; font-weight: 700; color: #5d6875;
+              letter-spacing: .08cqw; text-transform: uppercase; }
+.crow.cempty { display: block; height: auto; padding: 1.2cqw 0; font-size: 1.8cqw; font-weight: 600; color: #5d6875; }
+.ct { font-size: 2.6cqw; font-weight: 800; }
+.ct.dim { color: #aab3c0; font-weight: 700; }
+.cw { font-size: 2.6cqw; font-weight: 800; }
+.cw small, .cs small { font-size: 1.2cqw; font-weight: 600; color: #8b95a3; margin-left: .3cqw; }
+.cw.w-short { color: #5ee08a; }
+.cw.w-long { color: #ffd166; }
+.cs { font-size: 2.6cqw; font-weight: 800; text-align: right; }
+.crow.target { background: linear-gradient(90deg, rgba(247,195,204,0) 0, rgba(247,195,204,.08) 100%); }
+.crow.target .cs { color: #f7c3cc; }
+.crow.late { opacity: .45; }
+.sched { justify-self: end; font-size: .9cqw; font-weight: 700; letter-spacing: .12cqw; text-transform: uppercase;
+         color: #5d6875; border: .08cqw solid #3b4a5e; border-radius: .3cqw; padding: .1cqw .4cqw; }
+.ctabs { display: flex; gap: .6cqw; margin: .2cqw 0 .6cqw; }
+.ctab { font: inherit; font-size: 1.2cqw; font-weight: 700; color: #aab3c0; background: transparent;
+        border: .1cqw solid #2a313c; border-radius: 99px; padding: .3cqw 1.1cqw; }
+.ctab.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }
+/* With the panel up, the remaining platform's rows tighten so both fit the stage
+   even under a two-line alert. */
+#stage .arr.with-commute .row:not(.empty) { height: 4.8cqw; }
+.arr.with-commute .dest { font-size: 2.5cqw; }
+.arr.with-commute .min { font-size: 3.2cqw; }
+.arr.with-commute .plat h2 { margin-top: 1.2cqw; }

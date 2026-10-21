@@ -12,11 +12,13 @@ from .poller import Feed
 from .positions import decode_positions
 from .predictions import parse_predictions
 from .service import station_data
+from .trips import decode_trip_updates
 
 STATION_CADENCE_S = 86400.0   # names, lines and first/last trains change rarely
 
 
-def build_feeds(config: Config, client, *, network_loader=None, clock: Callable[[], float] = time.monotonic) -> dict[str, Feed]:
+def build_feeds(config: Config, client, *, network_loader=None, schedule_loader=None,
+                clock: Callable[[], float] = time.monotonic) -> dict[str, Feed]:
     stations = list(config.board.stations)
     code = config.board.station
     idle = config.polling.idle_after
@@ -41,4 +43,13 @@ def build_feeds(config: Config, client, *, network_loader=None, clock: Callable[
     }
     if network_loader is not None:   # hourly check; the cache decides when to download
         feeds["network"] = Feed("network", network_loader.load, 3600.0, gated=False, clock=clock)
+    if config.commute is not None:
+        commute_stations = config.commute.stations
+
+        async def trips():
+            return decode_trip_updates(await client.trip_updates(), commute_stations)
+
+        feeds["trips"] = Feed("trips", trips, config.polling.trips, idle_after=idle, clock=clock)
+        if schedule_loader is not None:
+            feeds["schedule"] = Feed("schedule", schedule_loader.load, 3600.0, gated=False, clock=clock)
     return feeds

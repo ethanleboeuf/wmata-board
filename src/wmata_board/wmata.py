@@ -83,5 +83,8 @@ class WmataClient:
     async def vehicle_positions(self) -> bytes:
         return (await self._get("/gtfs/rail-gtfsrt-vehiclepositions.pb")).content
 
+    async def trip_updates(self) -> bytes:
+        return (await self._get("/gtfs/rail-gtfsrt-tripupdates.pb")).content
+
     async def gtfs_static(self) -> bytes:
         return (await self._get("/gtfs/rail-gtfs-static.zip", timeout=STATIC_TIMEOUT_S)).content

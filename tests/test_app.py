@@ -210,3 +210,51 @@ def test_positions_zero_header_timestamp_falls_back_to_fetch_age(fixtures):
                      clock=clock, wall_clock=lambda: 1e12)
     with TestClient(app) as c:
         assert c.get("/api/positions").json()["stale"] is False
+
+
+@pytest.fixture
+def commute_app(fixtures):
+    from zoneinfo import ZoneInfo
+
+    from wmata_board.trips import FixtureSchedule
+
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), clock=clock,
+                        schedule_loader=FixtureSchedule(fixtures / "schedule.json", ZoneInfo(cfg.board.timezone)))
+    feeds["schedule"].state.value = asyncio.run(feeds["schedule"]._fetch())
+    return create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test",
+                      fresh_wait_s=0, start_polling=False, clock=clock)
+
+
+def test_commute_outside_the_windows_does_not_poll(commute_app):
+    with TestClient(commute_app) as c:
+        body = c.get("/api/commute?at=12:00").json()
+    assert body["mode"] is None
+    assert not commute_app.state.feeds["trips"].wanted()
+
+
+def test_commute_morning_preview_from_the_timetable(commute_app):
+    with TestClient(commute_app) as c:
+        r = c.get("/api/commute?mode=am&at=7:30")
+    assert r.status_code == 200 and r.headers["cache-control"].startswith("no-store")
+    body = r.json()
+    assert body["mode"] == "am" and body["live"] is False and body["wall_platform"] == "2"
+    rows = body["am"]["rows"]
+    assert len(rows) == 5
+    assert all(r["line"] in ("OR", "SV") for r in rows)
+    assert any(r["target"] for r in rows)
+    assert commute_app.state.feeds["trips"].wanted()
+
+
+def test_commute_evening_preview(commute_app):
+    with TestClient(commute_app) as c:
+        body = c.get("/api/commute?mode=pm&at=17:00").json()
+    assert body["pm"]["station_name"] == "Takoma"
+    assert len(body["pm"]["hospital"]) == 5 and len(body["pm"]["station"]) == 5
+
+
+@pytest.mark.parametrize("query", ["mode=noon", "at=25:00", "at=7"])
+def test_commute_rejects_bad_preview_params(commute_app, query):
+    with TestClient(commute_app) as c:
+        assert c.get(f"/api/commute?{query}").status_code == 422

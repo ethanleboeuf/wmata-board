@@ -17,6 +17,7 @@ timezone = "America/New_York"
 arrivals = 20
 incidents = 60
 positions = 5
+trips = 20                     # live trip predictions, only while a commute panel is up
 idle_after = 90                # a feed is polled only this long after someone last asked
 
 [map]
@@ -33,3 +34,19 @@ style = "hospital"
 [server]
 host = "127.0.0.1"
 port = 8766
+
+[commute]                     # Children's National via the Brookland shuttle (weekdays only)
+name = "Children's National"
+home = "K01"                  # Court House
+transfer = ["C01", "A01"]     # Metro Center: Orange/Silver platform, Red platform
+shuttle_stop = "B05"          # Brookland-CUA
+evening_from = "B07"          # Takoma, the other evening start
+morning = ["06:30", "08:10"]  # wall + phone: Court House -> shuttle
+evening = ["16:00", "18:30"]  # phone: hospital or Takoma -> Court House
+shuttles = ["08:12", "08:18"] # the morning shuttles she aims for (highlighted)
+shuttle_every = 6             # minutes; it leaves both ends on :00, :06, :12 ...
+shuttle_ride = 10             # hospital -> Brookland, minutes
+transfer_walk = 2             # Metro Center, platform to platform, minutes
+shuttle_walk = 3              # Brookland, platform <-> shuttle stop, minutes
+rows = 5
+wall_platform = "2"           # the wall's westbound list gives way to the panel

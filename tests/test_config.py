@@ -96,3 +96,32 @@ def test_no_key_is_none(tmp_path):
 def test_repr_never_shows_key(tmp_path):
     config = load_config(write(tmp_path, ""), environ={"WMATA_API_KEY": "s3cret-key"})
     assert "s3cret-key" not in repr(config)
+
+
+def test_repo_commute_config():
+    c = load_config(REPO / "config.toml", environ={}).commute
+    assert c is not None
+    assert (c.home, c.transfer, c.shuttle_stop, c.evening_from) == ("K01", ("C01", "A01"), "B05", "B07")
+    assert c.morning == (6 * 60 + 30, 8 * 60 + 10)
+    assert c.evening == (16 * 60, 18 * 60 + 30)
+    assert c.shuttles == (8 * 60 + 12, 8 * 60 + 18)
+    assert (c.shuttle_every, c.shuttle_ride, c.transfer_walk, c.shuttle_walk) == (6, 10, 2, 3)
+    assert c.stations == ("K01", "C01", "A01", "B05", "B07")
+
+
+def test_commute_is_optional(tmp_path):
+    assert load_config(write(tmp_path, ""), environ={}).commute is None
+
+
+@pytest.mark.parametrize("body, msg", [
+    ('morning = ["8:10", "6:30"]', "start must be before end"),
+    ('morning = ["6:30"]', r"must be \[start, end\]"),
+    ('shuttles = ["8:75"]', "not a time"),
+    ('shuttle_every = 7', "divides 60"),
+    ('transfer = ["C01"]', "transfer must be"),
+    ('home = "Court House"', "not a station code"),
+    ('transfer_walk = -1', "0-60"),
+])
+def test_commute_validation(tmp_path, body, msg):
+    with pytest.raises(ConfigError, match=msg):
+        load_config(write(tmp_path, f"[commute]\n{body}\n"), environ={})

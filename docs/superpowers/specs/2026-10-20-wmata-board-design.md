@@ -198,6 +198,42 @@ committed.
 5. Live map: network endpoint, basemap extract + style, overlay, glide, landmarks.
 6. Phone view + Tailscale mapping.
 
+## Commute panel (added 2026-10-21)
+
+For getting to Children's National via the free Brookland shuttle. Decided
+in chat (no separate spec/plan):
+
+- **Morning** (weekdays 06:30–08:10, wall + phone): always from Court House.
+  One row per Orange/Silver train: leave time, Metro Center wait, Brookland
+  arrival, the first shuttle she can walk to, minutes spare. All options are
+  shown, not a single pick. Rows making the 8:12 / 8:18 shuttle are
+  highlighted; rows reaching a later one are dimmed. On the wall the panel
+  replaces the westbound list.
+- **Evening** (weekdays 16:00–18:30, phone only): home to Court House from
+  either the hospital (shuttle → Brookland → Red) or Takoma (B07, Red),
+  transferring at Metro Center. The phone remembers which.
+- **Times**: Metro Center platform to platform 2 min; Brookland platform ↔
+  shuttle 3 min; shuttle ride 10 min. The shuttle leaves both ends every
+  6 min on :00/:06/:12… (Children's National timetable effective 2026-05-04,
+  weekdays only). "Spare" = shuttle − Brookland arrival; the walk is not
+  subtracted, but a shuttle only counts if the walk fits.
+- **Data**: GTFS-RT trip updates (`rail-gtfsrt-tripupdates.pb`, polled every
+  20 s only while a panel is up) overlaid by trip_id on the GTFS static
+  timetable (`data/schedule.json`, rebuilt daily). The live feed predicts
+  every remaining stop of running trips and of trips starting within ~40 min
+  (70–90 min ahead at these stations). Rows beyond that are marked `sched`.
+  Measured: the live feed lists ~97% of running trips, so a timetabled trip
+  it does not list that should already be running (or starts within 20 min)
+  is treated as not running. Stops without a live time take the delay of the
+  previous predicted stop. Live data older than 2 min is ignored.
+- **API**: `GET /api/commute` → `{mode: "am"|"pm"|null, name, live, notice,
+  wall_platform, am: {shuttles, rows}, pm: {hospital, station, station_name}}`.
+  `?mode=am|pm&at=H:MM` (on the pages: `?commute=am&at=7:30`) previews a
+  panel at other times.
+- Config: `[commute]` in `config.toml`; `[polling].trips`.
+- Observation from the timetable: Silver trains connect to Red at Metro
+  Center in ~2 min, Orange in ~6.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by

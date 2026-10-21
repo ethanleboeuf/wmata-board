@@ -53,6 +53,12 @@ class FixtureClient:
         feed.header.timestamp = int(time.time())
         return feed.SerializeToString()
 
+    async def trip_updates(self) -> bytes:
+        try:
+            return (self._root / "trip_updates.pb").read_bytes()
+        except FileNotFoundError:
+            raise WmataError("http", "fixture trip_updates.pb missing") from None
+
     async def gtfs_static(self) -> bytes:
         raise WmataError("http", "fixtures mode has no GTFS static zip (uses network.json)")
 

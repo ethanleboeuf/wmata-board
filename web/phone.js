@@ -1,8 +1,9 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them).
 import { formatClock, pillState, arrivalsExpired } from "./format.js";
-import { arrivalsPanelHtml, alertHtml } from "./render.js";
+import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml } from "./render.js";
 import { createMap } from "./map.js";
+import { startCommute } from "./commute.js";
 
 const $ = id => document.getElementById(id);
 const startMs = Date.now();
@@ -38,9 +39,28 @@ function renderArrivals(force = false) {
   $("arrivals").innerHTML = arrivalsPanelHtml(board, expired);
 }
 
+// Commute card at the top of the sheet during the morning/evening windows.
+// Evenings, the Hospital/Takoma choice is remembered on this phone.
+let commute = null, origin = "hospital";
+try { origin = localStorage.getItem("commuteFrom") || origin; } catch { /* private mode */ }
+function renderCommute() {
+  const el = $("commute");
+  el.innerHTML = !commute ? "" : commute.mode === "am" ? commuteAmHtml(commute) : commutePmHtml(commute, origin);
+}
+$("commute").addEventListener("click", ev => {
+  const tab = ev.target.closest("[data-origin]");
+  if (!tab) return;
+  origin = tab.dataset.origin;
+  try { localStorage.setItem("commuteFrom", origin); } catch { /* not remembered, still switched */ }
+  renderCommute();
+});
+const commutePoller = startCommute(c => { commute = c; renderCommute(); });
+
 // Coming back from the background: don't show a false red "Board offline" while
 // waiting out the rest of the poll interval.
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") poll(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { poll(); commutePoller.poll(); }
+});
 
 function tick() {
   const now = Date.now();

@@ -14,16 +14,18 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .board import build_board
+from .commute import AM, PM, build_commute, commute_mode
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
+from .state import FeedState
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_DIR = PROJECT_ROOT / "web"
@@ -72,10 +74,11 @@ class _NoStoreStaticFiles(StaticFiles):
 def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                version: str = __version__, fresh_wait_s: float = 3.0,
                start_polling: bool = True, data_dir: Path = DATA_DIR,
-               network_loader=None,
+               network_loader=None, schedule_loader=None,
                clock: Callable[[], float] = time.monotonic,
                wall_clock: Callable[[], float] = time.time) -> FastAPI:
-    feeds = feeds if feeds is not None else build_feeds(config, client, network_loader=network_loader, clock=clock)
+    feeds = feeds if feeds is not None else build_feeds(config, client, network_loader=network_loader,
+                                                       schedule_loader=schedule_loader, clock=clock)
     poller = Poller(feeds)
     tz = ZoneInfo(config.board.timezone)
 
@@ -131,6 +134,26 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "error": st.error_kind,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
         }, headers=NO_STORE)
+
+    @app.get("/api/commute")
+    async def commute(mode: str | None = Query(None, pattern=f"^({AM}|{PM})$"),
+                      at: str | None = Query(None, pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")):
+        """`mode` and `at` (H:MM today) are for previewing a panel off-hours."""
+        cfg = config.commute
+        if cfg is None:
+            return JSONResponse({"mode": None}, headers=NO_STORE)
+        wall_now = wall_clock()
+        now = wall_now
+        if at:
+            h, m = (int(x) for x in at.split(":"))
+            now = datetime.fromtimestamp(wall_now, tz).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+        if mode or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
+            await want("trips")
+        sched = feeds.get("schedule")
+        body = build_commute(cfg, schedule=sched.state if sched else FeedState(),
+                             updates=feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
+                             wall_now=wall_now, mode=mode)
+        return JSONResponse(body, headers=NO_STORE)
 
     @app.get("/api/network")
     async def network():

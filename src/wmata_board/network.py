@@ -134,19 +134,27 @@ def build_network(data: bytes) -> dict:
 
 class NetworkCache:
     """data/network.json, rebuilt from the GTFS static zip once a day. A stale
-    cache is served if the download fails -- track geometry barely changes."""
+    cache is served if the download fails -- track geometry barely changes.
+
+    `build` turns the zip into what is cached (the commute timetable reuses
+    this with trips.build_schedule); `key` names what it was built for, and a
+    cache built for another key is ignored."""
 
     def __init__(self, client, path: Path, *, max_age_s: float = MAX_AGE_S,
-                 clock: Callable[[], float] = time.time) -> None:
+                 clock: Callable[[], float] = time.time,
+                 build: Callable[[bytes], dict] = build_network, key: str = "") -> None:
         self._client, self._path, self._max_age, self._clock = client, Path(path), max_age_s, clock
+        self._build, self._key = build, key
         self._memo: dict | None = None
         self._built_at: float | None = None
 
     def _read(self) -> tuple[dict, float] | None:
         try:
             blob = json.loads(self._path.read_text(encoding="utf-8"))
+            if blob.get("key", "") != self._key:
+                return None
             return blob["network"], float(blob["built_at"])
-        except (FileNotFoundError, ValueError, KeyError, TypeError):
+        except (FileNotFoundError, ValueError, KeyError, TypeError, AttributeError):
             return None
 
     async def load(self) -> dict:
@@ -156,21 +164,21 @@ class NetworkCache:
             return self._memo
         try:
             data = await self._client.gtfs_static()
-            network = await asyncio.to_thread(build_network, data)
+            built = await asyncio.to_thread(self._build, data)
         except (WmataError, zipfile.BadZipFile, KeyError, ValueError) as exc:
             if self._memo is not None:
-                log.warning("network refresh failed (%s); keeping cached copy", exc)
+                log.warning("%s refresh failed (%s); keeping cached copy", self._path.name, exc)
                 return self._memo
             if isinstance(exc, WmataError):
                 raise
             raise WmataError("parse", f"bad GTFS static zip: {exc}") from None
-        self._memo, self._built_at = network, self._clock()
+        self._memo, self._built_at = built, self._clock()
         self._path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self._path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"built_at": self._built_at, "network": network}), encoding="utf-8")
+        tmp.write_text(json.dumps({"built_at": self._built_at, "key": self._key, "network": built}), encoding="utf-8")
         os.replace(tmp, self._path)
-        log.info("network rebuilt: %d lines, %d stations", len(network["lines"]), len(network["stations"]))
-        return network
+        log.info("%s rebuilt", self._path.name)
+        return built
 
 
 class FixtureNetwork:

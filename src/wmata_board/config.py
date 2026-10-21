@@ -45,6 +45,7 @@ class PollingConfig:
     arrivals: float = 20.0
     incidents: float = 60.0
     positions: float = 5.0
+    trips: float = 20.0
     idle_after: float = 90.0
 
 
@@ -75,6 +76,30 @@ class MapConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class CommuteConfig:
+    """Children's National via the Brookland shuttle. Times are minutes since
+    local midnight; durations are minutes."""
+    name: str = "Children's National"
+    home: str = "K01"                      # Court House
+    transfer: tuple[str, str] = ("C01", "A01")   # Metro Center: OR/SV platform, Red platform
+    shuttle_stop: str = "B05"              # Brookland-CUA
+    evening_from: str = "B07"              # Takoma, the other evening start
+    morning: tuple[int, int] = (390, 490)  # 6:30-8:10
+    evening: tuple[int, int] = (960, 1110)  # 4:00-6:30
+    shuttles: tuple[int, ...] = (492, 498)  # 8:12, 8:18: highlighted
+    shuttle_every: int = 6
+    shuttle_ride: float = 10.0
+    transfer_walk: float = 2.0
+    shuttle_walk: float = 3.0
+    rows: int = 5
+    wall_platform: str = "2"               # the wall platform the panel replaces
+
+    @property
+    def stations(self) -> tuple[str, ...]:
+        return (self.home, *self.transfer, self.shuttle_stop, self.evening_from)
+
+
+@dataclass(frozen=True, slots=True)
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8766
@@ -87,6 +112,7 @@ class Config:
     polling: PollingConfig
     map: MapConfig
     server: ServerConfig
+    commute: CommuteConfig | None = None
     api_key: str | None = field(default=None, repr=False)
 
 
@@ -149,7 +175,7 @@ def _platforms(t: Mapping[str, Any]) -> dict[str, dict[str, str]]:
 
 def _polling(t: Mapping[str, Any]) -> PollingConfig:
     values = {}
-    for name in ("arrivals", "incidents", "positions", "idle_after"):
+    for name in ("arrivals", "incidents", "positions", "trips", "idle_after"):
         if name in t:
             v = _number(t[name], f"[polling].{name}")
             if v <= 0:
@@ -186,6 +212,69 @@ def _map(t: Mapping[str, Any]) -> MapConfig:
 
     return MapConfig((west, south, east, north), tuple(str(x).upper() for x in labels),
                      tuple(places), tuple(landmarks))
+
+
+_HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+
+
+def _hhmm(value: Any, where: str) -> int:
+    m = _HHMM_RE.match(str(value).strip())
+    if not m:
+        raise ConfigError(f"{where}: {value!r} is not a time like '08:12'")
+    return int(m[1]) * 60 + int(m[2])
+
+
+def _window(value: Any, where: str) -> tuple[int, int]:
+    if not isinstance(value, list) or len(value) != 2:
+        raise ConfigError(f"{where} must be [start, end], e.g. [\"06:30\", \"08:10\"]")
+    start, end = (_hhmm(v, where) for v in value)
+    if start >= end:
+        raise ConfigError(f"{where}: start must be before end")
+    return start, end
+
+
+def _code(value: Any, where: str) -> str:
+    code = str(value).strip().upper()
+    if not _STATION_RE.match(code):
+        raise ConfigError(f"{where}: {value!r} is not a station code like 'K01'")
+    return code
+
+
+def _commute(t: Mapping[str, Any]) -> CommuteConfig | None:
+    if not t:
+        return None
+    d = CommuteConfig()
+    transfer = t.get("transfer", list(d.transfer))
+    if not isinstance(transfer, list) or len(transfer) != 2:
+        raise ConfigError("[commute].transfer must be [arriving platform code, departing platform code]")
+    minutes = {}
+    for name in ("shuttle_ride", "transfer_walk", "shuttle_walk"):
+        v = _number(t.get(name, getattr(d, name)), f"[commute].{name}")
+        if not 0 <= v <= 60:
+            raise ConfigError(f"[commute].{name} must be 0-60 minutes")
+        minutes[name] = v
+    every = t.get("shuttle_every", d.shuttle_every)
+    if isinstance(every, bool) or not isinstance(every, int) or every < 1 or 60 % every:
+        raise ConfigError("[commute].shuttle_every must be a whole number of minutes that divides 60")
+    rows = t.get("rows", d.rows)
+    if isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= 8:
+        raise ConfigError(f"[commute].rows must be an integer 1-8, got {rows!r}")
+    shuttles = t.get("shuttles", [])
+    if not isinstance(shuttles, list):
+        raise ConfigError("[commute].shuttles must be a list of times")
+    return CommuteConfig(
+        name=str(t.get("name", d.name)),
+        home=_code(t.get("home", d.home), "[commute].home"),
+        transfer=(_code(transfer[0], "[commute].transfer"), _code(transfer[1], "[commute].transfer")),
+        shuttle_stop=_code(t.get("shuttle_stop", d.shuttle_stop), "[commute].shuttle_stop"),
+        evening_from=_code(t.get("evening_from", d.evening_from), "[commute].evening_from"),
+        morning=_window(t["morning"], "[commute].morning") if "morning" in t else d.morning,
+        evening=_window(t["evening"], "[commute].evening") if "evening" in t else d.evening,
+        shuttles=tuple(sorted(_hhmm(x, "[commute].shuttles") for x in shuttles)) if "shuttles" in t else d.shuttles,
+        shuttle_every=every, rows=rows,
+        wall_platform=str(t.get("wall_platform", d.wall_platform)),
+        **minutes,
+    )
 
 
 def _server(t: Mapping[str, Any]) -> ServerConfig:
@@ -234,5 +323,6 @@ def load_config(path: Path, *, environ: Mapping[str, str] | None = None) -> Conf
         polling=_polling(_table(raw, "polling")),
         map=_map(_table(raw, "map")),
         server=_server(_table(raw, "server")),
+        commute=_commute(_table(raw, "commute")),
         api_key=_api_key(os.environ if environ is None else environ, path.parent / ".env"),
     )

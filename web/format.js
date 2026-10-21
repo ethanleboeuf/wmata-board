@@ -57,3 +57,14 @@ const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;
 export function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ESC[c]);
 }
+
+// Commute panel: how a Metro Center wait reads at a glance.
+export function waitClass(minutes) {
+  if (minutes <= 3) return "w-short";
+  if (minutes >= 7) return "w-long";
+  return "w-mid";
+}
+
+// The commute panel goes away if the backend hasn't answered for this long:
+// its rows are "trains from now on", and old ones would list trains long gone.
+export const COMMUTE_EXPIRE_MS = 120000;

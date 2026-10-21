@@ -1,7 +1,8 @@
 // Wall board: polls /api/board, renders arrivals, ticks the clock and pill.
 import { formatClock, pillState, alertIndex, arrivalsExpired } from "./format.js";
-import { arrivalsPanelHtml, alertHtml } from "./render.js";
+import { arrivalsPanelHtml, alertHtml, commuteAmHtml } from "./render.js";
 import { createMap } from "./map.js";
+import { startCommute } from "./commute.js";
 
 const POLL_MS = 5000;
 const $ = id => document.getElementById(id);
@@ -43,15 +44,20 @@ function render() {
   hooks.onBoard.forEach(fn => fn(board));
 }
 
-// Re-rendered on a new board, or when the local 10-minute expiry flips.
-let shownExpired = null;
+// Re-rendered on a new board or commute, or when the local 10-minute expiry flips.
+// Mornings, the commute panel takes the place of one platform (westbound).
+let shownExpired = null, commute = null;
 function renderArrivals(force = false) {
   if (!board) return;
   const expired = arrivalsExpired({ nowMs: Date.now(), lastOkMs, arrivalsAgeS: board.freshness?.arrivals?.age_s ?? null });
   if (!force && expired === shownExpired) return;
   shownExpired = expired;
-  $("arrivals").innerHTML = arrivalsPanelHtml(board, expired);
+  const am = commute?.mode === "am";
+  const b = am ? { ...board, platforms: board.platforms.filter(p => p.group !== commute.wall_platform) } : board;
+  $("arrivals").classList.toggle("with-commute", am);
+  $("arrivals").innerHTML = arrivalsPanelHtml(b, expired) + (am ? commuteAmHtml(commute) : "");
 }
+startCommute(c => { commute = c; renderArrivals(true); });
 
 function tick() {
   const now = Date.now();
