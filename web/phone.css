@@ -5,14 +5,14 @@ body.phone * { box-sizing: border-box; }
 .recenter { position: absolute; right: 14px; top: calc(14px + env(safe-area-inset-top)); width: 44px; height: 44px;
             border-radius: 50%; border: 1px solid #2a313c; background: rgba(13,17,23,.9); color: #e6ebf1;
             font-size: 22px; z-index: 3; }
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 85vh; z-index: 4; background: #0d1117;
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; background: #0d1117;
          border-top: 1px solid #2a313c; border-radius: 16px 16px 0 0; padding: 0 16px env(safe-area-inset-bottom);
-         transform: translateY(calc(85vh - 38vh)); transition: transform .25s ease; overflow-y: auto;
+         transition: transform .25s ease; overflow-y: auto;
          touch-action: pan-y; }
 .sheet.dragging { transition: none; }
-.handle { display: flex; justify-content: center; padding: 10px 0 6px; touch-action: none; cursor: grab; }
+.handle { display: flex; justify-content: center; align-items: center; min-height: 44px; padding: 0; touch-action: none; cursor: grab; }
 .handle span { width: 40px; height: 5px; border-radius: 3px; background: #3b4a5e; }
-.shdr { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px;
+.shdr { touch-action: none; cursor: grab; min-height: 44px; display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px;
         border-bottom: 1px solid #2a313c; }
 .phone .stn { font-size: 24px; }
 .phone .clk { font-size: 18px; }

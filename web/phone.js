@@ -36,27 +36,45 @@ function tick() {
   pill.textContent = p.text;
 }
 
-// Bottom sheet: drag the handle between "peek" (38vh visible) and "open" (85vh).
+// Bottom sheet: drag the handle or header between "peek" (38% visible) and "open"
+// (85%); a tap on either toggles. Sized in px from innerHeight so CSS and JS agree.
 const sheet = $("sheet");
-const PEEK = () => innerHeight * 0.85 - innerHeight * 0.38;
-let offset = PEEK(), dragFrom = null;
-const place = y => { offset = Math.max(0, Math.min(PEEK(), y)); sheet.style.transform = `translateY(${offset}px)`; };
-$("handle").addEventListener("pointerdown", ev => {
-  dragFrom = { y: ev.clientY, offset };
-  sheet.classList.add("dragging");
-  ev.target.setPointerCapture(ev.pointerId);
-});
-$("handle").addEventListener("pointermove", ev => { if (dragFrom) place(dragFrom.offset + ev.clientY - dragFrom.y); });
-$("handle").addEventListener("pointerup", () => {
-  if (!dragFrom) return;
+const sheetH = () => Math.round(innerHeight * 0.85);
+const PEEK = () => sheetH() - Math.round(innerHeight * 0.38);
+let offset = PEEK(), drag = null;
+const place = y => {
+  offset = Math.max(0, Math.min(PEEK(), y));
+  sheet.style.height = `${sheetH()}px`;
+  sheet.style.transform = `translateY(${offset}px)`;
+};
+function endDrag() {
+  if (!drag) return;
+  const moved = Math.abs(offset - drag.offset) > 5;
   sheet.classList.remove("dragging");
-  place(offset < PEEK() / 2 ? 0 : PEEK());
-  dragFrom = null;
-});
+  place(moved ? (offset < PEEK() / 2 ? 0 : PEEK()) : (drag.offset === 0 ? PEEK() : 0));
+  drag = null;
+}
+for (const el of [$("handle"), document.querySelector(".shdr")]) {
+  el.addEventListener("pointerdown", ev => {
+    drag = { y: ev.clientY, offset };
+    sheet.classList.add("dragging");
+    ev.currentTarget.setPointerCapture(ev.pointerId);
+  });
+  el.addEventListener("pointermove", ev => { if (drag) place(drag.offset + ev.clientY - drag.y); });
+  el.addEventListener("pointerup", endDrag);
+  el.addEventListener("pointercancel", endDrag);
+  el.addEventListener("lostpointercapture", endDrag);
+}
 addEventListener("resize", () => place(offset > 0 ? PEEK() : 0));
 place(PEEK());
 
-createMap($("map"), { interactive: true, fit: "contain" })
+// Fit the wall's bbox into the part of the map the sheet doesn't cover.
+const fitPadding = () => ({
+  top: 56, left: 16, right: 16,
+  bottom: Math.min(sheetH() - offset, innerHeight * 0.6) + 16,
+});
+
+createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
   .then(m => {
     $("recenter").addEventListener("click", () => m.recenter());
     // Allow zooming out to the whole system, but not off into the void.

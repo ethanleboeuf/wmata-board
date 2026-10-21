@@ -63,17 +63,19 @@ function badge(line) {
     `<path class="dir" d="M15,-4 L21,0 L15,4 Z" fill="#fff"/>`;
 }
 
-export async function createMap(el, { interactive = false, fit = "cover" } = {}) {
+export async function createMap(el, { interactive = false, fit = "cover", padding = null } = {}) {
   const [net, style] = await Promise.all([getJson("/api/network"), loadStyle()]);
   if (!window.__pmtilesProtocol) {
     window.__pmtilesProtocol = new pmtiles.Protocol();
     maplibregl.addProtocol("pmtiles", window.__pmtilesProtocol.tile);
   }
   const [w, s, e, n] = net.view.bbox;
+  // padding: object or () => {top,bottom,left,right}; only used for non-"cover" fits.
+  const pad = () => (typeof padding === "function" ? padding() : padding) || 0;
   const start = fit === "cover" ? coverView(net.view.bbox, el.clientWidth, el.clientHeight) : null;
   const map = new maplibregl.Map({
     container: el, style, interactive, attributionControl: false, fadeDuration: 0,
-    ...(start ? { center: start.center, zoom: start.zoom } : { bounds: [[w, s], [e, n]] }),
+    ...(start ? { center: start.center, zoom: start.zoom } : { bounds: [[w, s], [e, n]], fitBoundsOptions: { padding: pad() } }),
     dragRotate: false, pitchWithRotate: false, touchPitch: false,
   });
   map.addControl(new maplibregl.AttributionControl({ compact: false }), "bottom-right");
@@ -254,7 +256,7 @@ export async function createMap(el, { interactive = false, fit = "cover" } = {})
     map,
     recenter() {
       if (fit === "cover") refit();
-      else map.fitBounds([[w, s], [e, n]], { duration: 600 });
+      else map.fitBounds([[w, s], [e, n]], { duration: 600, padding: pad() });
     },
     destroy() { ro.disconnect(); map.remove(); },
   };
