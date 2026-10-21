@@ -12,6 +12,8 @@ const ORDER = ["RD", "GR", "YL", "BL", "OR", "SV"];
 const DARK_TEXT = new Set(["OR", "SV", "YL"]);
 const LAND = "#0f151d";
 const POSITIONS_MS = 5000;
+const POSITIONS_STALE_MS = 120000;   // no good /api/positions for this long -> fade trains
+const FETCH_TIMEOUT_MS = 8000;       // a hung request must never stall a poll loop
 // Hand-tuned label placement from the approved prototype: [dx, dy, anchor, name].
 const LABEL_HINTS = {
   K04: [0, 30, "middle", "Ballston"], K02: [0, 30, "middle"], C05: [16, -12, "start"],
@@ -30,7 +32,7 @@ const svgEl = (tag, attrs = {}) => {
 async function getJson(url) {
   for (let delay = 1000; ; delay = Math.min(delay * 2, 30000)) {
     try {
-      const r = await fetch(url, { cache: "no-store" });
+      const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (r.ok) return await r.json();
     } catch (err) { /* retry */ }
     await new Promise(res => setTimeout(res, delay));
@@ -40,7 +42,7 @@ async function getJson(url) {
 async function loadStyle() {
   const style = await getJson("/static/style.json");
   let haveBasemap = false;
-  try { haveBasemap = (await fetch("/basemap.pmtiles", { method: "HEAD" })).ok; } catch (err) { /* offline */ }
+  try { haveBasemap = (await fetch("/basemap.pmtiles", { method: "HEAD", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })).ok; } catch (err) { /* offline */ }
   if (haveBasemap) {
     style.sources.protomaps.url = `pmtiles://${location.origin}/basemap.pmtiles`;
   } else {
@@ -152,14 +154,22 @@ export async function createMap(el, { interactive = false, fit = "cover" } = {})
   const glider = new Glider();
   const els = new Map();
   let stale = true;
+  let lastGoodMs = performance.now();
+
+  function setStale(v) {
+    stale = v;
+    gTrains.classList.toggle("faded", stale);
+  }
 
   async function pollPositions() {
+    let ok = false;
     try {
-      const r = await fetch("/api/positions", { cache: "no-store" });
+      const r = await fetch("/api/positions", { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (r.ok) {
         const body = await r.json();
-        stale = body.stale;
-        gTrains.classList.toggle("faded", stale);
+        ok = true;
+        lastGoodMs = performance.now();
+        setStale(body.stale);
         if (body.feed_timestamp !== null) {
           const vs = [];
           for (const v of body.vehicles) {
@@ -171,8 +181,12 @@ export async function createMap(el, { interactive = false, fit = "cover" } = {})
           glider.update(vs, body.feed_timestamp, performance.now());
         }
       }
-    } catch (err) { /* keep gliding what we have; fades when stale */ }
-    setTimeout(pollPositions, POSITIONS_MS);
+    } catch (err) {
+      /* keep gliding what we have; fades once failures outlast POSITIONS_STALE_MS */
+    } finally {
+      if (!ok && performance.now() - lastGoodMs > POSITIONS_STALE_MS) setStale(true);
+      setTimeout(pollPositions, POSITIONS_MS);
+    }
   }
 
   function screenAt(line, s) {
@@ -220,10 +234,18 @@ export async function createMap(el, { interactive = false, fit = "cover" } = {})
     const v = coverView(net.view.bbox, el.clientWidth, el.clientHeight);
     map.jumpTo({ center: v.center, zoom: v.zoom });
   }
-  const ro = new ResizeObserver(() => { map.resize(); refit(); drawStatic(); });
+  // Rebuilding the static SVG is the expensive part; coalesce move/load/resize
+  // bursts (the phone pans interactively) into at most one redraw per frame.
+  let drawPending = false;
+  function scheduleDraw() {
+    if (drawPending) return;
+    drawPending = true;
+    requestAnimationFrame(() => { drawPending = false; drawStatic(); });
+  }
+  const ro = new ResizeObserver(() => { map.resize(); refit(); scheduleDraw(); });
   ro.observe(el);
-  map.on("move", drawStatic);
-  map.on("load", drawStatic);
+  map.on("move", scheduleDraw);
+  map.on("load", scheduleDraw);
   drawStatic();
   pollPositions();
   requestAnimationFrame(frame);
