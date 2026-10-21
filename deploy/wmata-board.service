@@ -1,0 +1,20 @@
+[Unit]
+Description=wmata-board -- Court House departure board
+Documentation=file:%h/wmata-board/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=%h/wmata-board
+# WMATA_API_KEY lives outside the repo (chmod 600), like ~/map-journal.env.
+EnvironmentFile=%h/wmata-board.env
+ExecStart=%h/wmata-board/.venv/bin/python -m wmata_board --config %h/wmata-board/config.toml
+Restart=always
+RestartSec=5
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
