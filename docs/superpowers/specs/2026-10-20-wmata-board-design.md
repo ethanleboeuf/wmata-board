@@ -213,7 +213,7 @@ in chat (no separate spec/plan):
   either the hospital (shuttle → Brookland → Red) or Takoma (B07, Red),
   transferring at Metro Center. The phone remembers which.
 - **Times**: Metro Center platform to platform 2 min; Brookland platform ↔
-  shuttle 3 min; shuttle ride 10 min. The shuttle leaves both ends every
+  shuttle 3 min; shuttle ride 12 min (15 min from shuttle door to Brookland platform). The shuttle leaves both ends every
   6 min on :00/:06/:12… (Children's National timetable effective 2026-05-04,
   weekdays only). "Spare" = shuttle − Brookland arrival; the walk is not
   subtracted, but a shuttle only counts if the walk fits.

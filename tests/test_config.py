@@ -105,7 +105,7 @@ def test_repo_commute_config():
     assert c.morning == (6 * 60 + 30, 8 * 60 + 10)
     assert c.evening == (16 * 60, 18 * 60 + 30)
     assert c.shuttles == (8 * 60 + 12, 8 * 60 + 18)
-    assert (c.shuttle_every, c.shuttle_ride, c.transfer_walk, c.shuttle_walk) == (6, 10, 2, 3)
+    assert (c.shuttle_every, c.shuttle_ride, c.transfer_walk, c.shuttle_walk) == (6, 12, 2, 3)
     assert c.stations == ("K01", "C01", "A01", "B05", "B07")
 
 

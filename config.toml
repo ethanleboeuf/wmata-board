@@ -45,7 +45,7 @@ morning = ["06:30", "08:10"]  # wall + phone: Court House -> shuttle
 evening = ["16:00", "18:30"]  # phone: hospital or Takoma -> Court House
 shuttles = ["08:12", "08:18"] # the morning shuttles she aims for (highlighted)
 shuttle_every = 6             # minutes; it leaves both ends on :00, :06, :12 ...
-shuttle_ride = 10             # hospital -> Brookland, minutes
+shuttle_ride = 12             # hospital -> Brookland stop; + shuttle_walk = 15 door to platform
 transfer_walk = 2             # Metro Center, platform to platform, minutes
 shuttle_walk = 3              # Brookland, platform <-> shuttle stop, minutes
 rows = 5
