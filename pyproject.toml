@@ -25,3 +25,7 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    # third-party: starlette nags about httpx in TestClient; nothing for us to fix
+    "ignore:Using .httpx. with .starlette.testclient. is deprecated",
+]
