@@ -110,9 +110,12 @@ async def test_fixture_client_cycles_positions(fixtures):
     c = FixtureClient(fixtures)
     files = sorted((fixtures / "positions").glob("*.pb"))
     got = [await c.vehicle_positions() for _ in range(len(files) + 1)]
-    assert got[0] == files[0].read_bytes()
-    assert got[1] == files[1].read_bytes()
-    assert got[-1] == files[0].read_bytes()
+    from wmata_board.positions import decode_positions
+    def vehicles(b):                       # header timestamp is rewritten to now
+        return decode_positions(b).vehicles
+    assert vehicles(got[0]) == vehicles(files[0].read_bytes())
+    assert vehicles(got[1]) == vehicles(files[1].read_bytes())
+    assert vehicles(got[-1]) == vehicles(files[0].read_bytes())
 
 
 async def test_fixture_client_missing_file_is_wmata_error(tmp_path):

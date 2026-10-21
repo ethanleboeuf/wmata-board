@@ -73,7 +73,8 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                version: str = __version__, fresh_wait_s: float = 3.0,
                start_polling: bool = True, data_dir: Path = DATA_DIR,
                network_loader=None,
-               clock: Callable[[], float] = time.monotonic) -> FastAPI:
+               clock: Callable[[], float] = time.monotonic,
+               wall_clock: Callable[[], float] = time.time) -> FastAPI:
     feeds = feeds if feeds is not None else build_feeds(config, client, network_loader=network_loader, clock=clock)
     poller = Poller(feeds)
     tz = ZoneInfo(config.board.timezone)
@@ -120,11 +121,13 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         st = feeds["positions"].state
         age = st.age(clock())
         snap = st.value
+        feed_ts = snap.feed_timestamp if snap else 0
+        feed_old = bool(feed_ts) and wall_clock() - feed_ts > POSITIONS_STALE_AFTER_S
         return JSONResponse({
             "fetched_at": st.fetched_wall.isoformat(timespec="seconds") if st.fetched_wall else None,
             "feed_timestamp": snap.feed_timestamp if snap else None,
             "age_s": None if age is None else int(age),
-            "stale": age is None or age > POSITIONS_STALE_AFTER_S,
+            "stale": age is None or age > POSITIONS_STALE_AFTER_S or feed_old,
             "error": st.error_kind,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
         }, headers=NO_STORE)

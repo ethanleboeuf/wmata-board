@@ -60,3 +60,11 @@ def test_garbage_is_parse_error():
     with pytest.raises(WmataError) as err:
         decode_positions(b"\xff\xff\xff\xff")
     assert err.value.kind == "parse"
+
+
+def test_fixture_client_stamps_snapshots_now(fixtures):
+    import asyncio, time
+    from wmata_board.fixtures import FixtureClient
+    snap = decode_positions(asyncio.run(FixtureClient(fixtures).vehicle_positions()))
+    assert abs(snap.feed_timestamp - time.time()) < 5
+    assert len(snap.vehicles) > 20

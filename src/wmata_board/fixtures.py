@@ -8,9 +8,12 @@ were recorded 5 s apart, the same as the positions cadence.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+
+from google.transit import gtfs_realtime_pb2
 
 from .wmata import WmataError
 
@@ -44,7 +47,11 @@ class FixtureClient:
             raise WmataError("http", "no position fixtures")
         data = self._snapshots[self._next % len(self._snapshots)].read_bytes()
         self._next += 1
-        return data
+        # The recordings are old; stamp them 'now' so the map isn't flagged stale.
+        feed = gtfs_realtime_pb2.FeedMessage()
+        feed.ParseFromString(data)
+        feed.header.timestamp = int(time.time())
+        return feed.SerializeToString()
 
     async def gtfs_static(self) -> bytes:
         raise WmataError("http", "fixtures mode has no GTFS static zip (uses network.json)")

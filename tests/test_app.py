@@ -28,7 +28,8 @@ def app(fixtures):
     feeds["incidents"].state = incidents_state()
     feeds["station"].state = station_state()
     return create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test",
-                      fresh_wait_s=0, start_polling=False, clock=clock)
+                      fresh_wait_s=0, start_polling=False, clock=clock,
+                      wall_clock=lambda: 0.0)   # recorded feed timestamps are never 'old' here
 
 
 def test_board_endpoint(app):
@@ -178,3 +179,34 @@ def test_phone_served(app):
     with TestClient(app) as c:
         r = c.get("/phone")
     assert r.status_code == 200 and 'id="sheet"' in r.text
+
+
+def test_positions_stale_when_feed_header_timestamp_is_old(fixtures):
+    from wmata_board.positions import decode_positions
+    from helpers import state
+    cfg = config()
+    clock = Clock()
+    snap = decode_positions(sorted((fixtures / "positions").glob("*.pb"))[0].read_bytes())
+    feeds = build_feeds(cfg, FixtureClient(fixtures), clock=clock)
+    feeds["positions"].state = state(snap)            # fetched 10 s ago on our clock
+    app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=0, start_polling=False,
+                     clock=clock, wall_clock=lambda: snap.feed_timestamp + 600)
+    with TestClient(app) as c:
+        assert c.get("/api/positions").json()["stale"] is True
+    app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=0, start_polling=False,
+                     clock=clock, wall_clock=lambda: snap.feed_timestamp + 30)
+    with TestClient(app) as c:
+        assert c.get("/api/positions").json()["stale"] is False
+
+
+def test_positions_zero_header_timestamp_falls_back_to_fetch_age(fixtures):
+    from wmata_board.positions import PositionsSnapshot
+    from helpers import state
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), clock=clock)
+    feeds["positions"].state = state(PositionsSnapshot(0, ()))
+    app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=0, start_polling=False,
+                     clock=clock, wall_clock=lambda: 1e12)
+    with TestClient(app) as c:
+        assert c.get("/api/positions").json()["stale"] is False
