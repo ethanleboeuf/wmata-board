@@ -1,0 +1,14 @@
+{"Incidents": [
+  {"DateUpdated": "2026-10-20T21:58:12", "DelaySeverity": null,
+   "Description": "Orange/Silver Line: Trains operating every 15 minutes between Ballston and Stadium-Armory due to track maintenance.",
+   "EmergencyText": null, "EndLocationFullName": null, "IncidentID": "A1B2C3D4-0000-4000-8000-000000000001",
+   "IncidentType": "Alert", "LinesAffected": "OR; SV;", "PassengerDelay": 0, "StartLocationFullName": null},
+  {"DateUpdated": "2026-10-20T20:11:40", "DelaySeverity": null,
+   "Description": "Red Line: Expect residual delays to Glenmont due to an earlier signal problem outside Forest Glen.",
+   "EmergencyText": null, "EndLocationFullName": null, "IncidentID": "A1B2C3D4-0000-4000-8000-000000000002",
+   "IncidentType": "Delay", "LinesAffected": "RD;", "PassengerDelay": 0, "StartLocationFullName": null},
+  {"DateUpdated": "2026-10-20T19:02:00", "DelaySeverity": null,
+   "Description": "Blue/Orange/Silver Line: Single tracking between Foggy Bottom and Smithsonian.",
+   "EmergencyText": null, "EndLocationFullName": null, "IncidentID": "A1B2C3D4-0000-4000-8000-000000000003",
+   "IncidentType": "Alert", "LinesAffected": "BL;OR;SV;", "PassengerDelay": 0, "StartLocationFullName": null}
+]}
