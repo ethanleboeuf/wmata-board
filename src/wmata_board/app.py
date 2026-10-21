@@ -42,8 +42,9 @@ class _NoStoreStaticFiles(StaticFiles):
 def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                version: str = __version__, fresh_wait_s: float = 3.0,
                start_polling: bool = True, data_dir: Path = DATA_DIR,
+               network_loader=None,
                clock: Callable[[], float] = time.monotonic) -> FastAPI:
-    feeds = feeds if feeds is not None else build_feeds(config, client, clock=clock)
+    feeds = feeds if feeds is not None else build_feeds(config, client, network_loader=network_loader, clock=clock)
     poller = Poller(feeds)
     tz = ZoneInfo(config.board.timezone)
 
@@ -97,6 +98,22 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "error": st.error_kind,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
         }, headers=NO_STORE)
+
+    @app.get("/api/network")
+    async def network():
+        feed = feeds.get("network")
+        net = feed.state.value if feed else None
+        if net is None:
+            return JSONResponse({"error": "network loading"}, status_code=503, headers=NO_STORE)
+        m = config.map
+        return JSONResponse({
+            **net,
+            "home": config.board.station,
+            "view": {"bbox": list(m.bbox)},
+            "labels": list(m.labels),
+            "places": [{"name": p.name, "lat": p.lat, "lon": p.lon} for p in m.places],
+            "landmarks": [{"name": x.name, "lat": x.lat, "lon": x.lon, "style": x.style} for x in m.landmarks],
+        }, headers={"Cache-Control": "max-age=600"})
 
     @app.get("/healthz")
     async def healthz():

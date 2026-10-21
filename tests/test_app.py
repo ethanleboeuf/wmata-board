@@ -8,6 +8,7 @@ from helpers import arrivals_state, config, incidents_state, station_state
 from wmata_board.app import create_app
 from wmata_board.fixtures import FixtureClient
 from wmata_board.feeds import build_feeds
+from wmata_board.network import FixtureNetwork
 from wmata_board.poller import Feed
 
 
@@ -22,7 +23,7 @@ class Clock:
 def app(fixtures):
     cfg = config()
     clock = Clock()
-    feeds = build_feeds(cfg, FixtureClient(fixtures), clock=clock)
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
     feeds["arrivals"].state = arrivals_state()
     feeds["incidents"].state = incidents_state()
     feeds["station"].state = station_state()
@@ -74,7 +75,7 @@ async def test_first_request_after_idle_waits_for_fresh_data(fixtures):
         calls.append(1)
         return arrivals_state().value     # real trains, so no "closed" notice at night
 
-    feeds = build_feeds(cfg, FixtureClient(fixtures))
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"))
     feeds["arrivals"] = Feed("arrivals", slow_fetch, 20.0)
     app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=2.0)
     import httpx
@@ -88,7 +89,7 @@ async def test_first_request_after_idle_waits_for_fresh_data(fixtures):
 
 async def _idle_app(fixtures, fetch):
     cfg = config()
-    feeds = build_feeds(cfg, FixtureClient(fixtures))
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"))
     feeds["arrivals"] = Feed("arrivals", fetch, 20.0)
     return create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=2.0)
 
@@ -151,3 +152,23 @@ def test_positions_before_first_fetch(app):
         body = c.get("/api/positions").json()
     assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
                     "error": None, "vehicles": []}
+
+
+def test_network_endpoint(app, fixtures):
+    import json
+    from helpers import state
+    app.state.feeds["network"].state = state(json.loads((fixtures / "network.json").read_text(encoding="utf-8")))
+    with TestClient(app) as c:
+        body = c.get("/api/network").json()
+    assert body["home"] == "K01"
+    assert body["view"] == {"bbox": [-77.122, 38.844, -76.978, 38.966]}
+    assert body["labels"][0] == "K04"
+    assert body["places"][0] == {"name": "GEORGETOWN", "lat": 38.9085, "lon": -77.0665}
+    assert body["landmarks"][0]["style"] == "hospital"
+    assert set(body["lines"]) == {"RD", "OR", "SV", "BL", "GR", "YL"}
+
+
+def test_network_loading(app):
+    with TestClient(app) as c:
+        r = c.get("/api/network")
+    assert r.status_code == 503

@@ -16,7 +16,7 @@ from .service import station_data
 STATION_CADENCE_S = 86400.0   # names, lines and first/last trains change rarely
 
 
-def build_feeds(config: Config, client, *, clock: Callable[[], float] = time.monotonic) -> dict[str, Feed]:
+def build_feeds(config: Config, client, *, network_loader=None, clock: Callable[[], float] = time.monotonic) -> dict[str, Feed]:
     stations = list(config.board.stations)
     code = config.board.station
     idle = config.polling.idle_after
@@ -33,9 +33,12 @@ def build_feeds(config: Config, client, *, clock: Callable[[], float] = time.mon
     async def positions():
         return decode_positions(await client.vehicle_positions())
 
-    return {
+    feeds = {
         "arrivals": Feed("arrivals", arrivals, config.polling.arrivals, idle_after=idle, clock=clock),
         "incidents": Feed("incidents", incidents, config.polling.incidents, idle_after=idle, clock=clock),
         "positions": Feed("positions", positions, config.polling.positions, idle_after=idle, clock=clock),
         "station": Feed("station", station, STATION_CADENCE_S, gated=False, clock=clock),
     }
+    if network_loader is not None:   # hourly check; the cache decides when to download
+        feeds["network"] = Feed("network", network_loader.load, 3600.0, gated=False, clock=clock)
+    return feeds
