@@ -1,6 +1,6 @@
 # WMATA board — design
 
-Date: 2026-10-20 · Status: draft for review
+Date: 2026-10-20 · Status: implemented (2026-10-21, all six milestones deployed)
 
 ## Goal
 
@@ -208,3 +208,10 @@ GTFS-RT feed carries occupancy), multi-station layouts.
 
 - ~~WMATA API key~~ done: primary key in `~/wmata-board.env` on the Pi (verified 200 on 2026-10-20).
 - ~~GitHub repo~~ done: `git@github.com:ethanleboeuf/wmata-board.git`.
+
+## Progress log
+
+- 2026-10-21 — All six milestones built (plan: `docs/superpowers/plans/2026-10-20-wmata-board.md`) and deployed to the Pi: `wmata-board.service` (systemd --user), kiosk-selector target `metro`, `tailscale serve --https=8446`, basemap extract (Protomaps build 20261020, 93 MB) in `~/wmata-board/data/`.
+- Deviations: Python floor is 3.12 (dev PC) — the Pi runs 3.13. Line codes in our JSON are WMATA's two-letter codes (`OR`), not GTFS route ids. `/api/board` adds a server-decided `notice`; `/api/positions` adds `feed_timestamp` and `error`. Destination alias `LastTrain` → "Last train" (seen live). go-pmtiles 1.31.2.
+- Hardening after final review: a key rejected mid-run shows "WMATA rejected the API key" once arrivals are >60 s old; pages expire arrivals locally after 10 min even if the backend is down; positions count as stale when the feed's own timestamp is >2 min old; alerts drop when the incident feed is >15 min old; env file optional in the unit, config errors don't restart-loop.
+- Logs on this Pi: `journalctl _SYSTEMD_USER_UNIT=wmata-board.service -f` (the `--user` journal isn't persisted).
