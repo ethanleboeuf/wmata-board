@@ -9,6 +9,7 @@ from collections.abc import Callable
 from .config import Config
 from .incidents import parse_incidents
 from .poller import Feed
+from .positions import decode_positions
 from .predictions import parse_predictions
 from .service import station_data
 
@@ -29,8 +30,12 @@ def build_feeds(config: Config, client, *, clock: Callable[[], float] = time.mon
     async def station():
         return station_data(code, await client.station_info(code), await client.station_times(code))
 
+    async def positions():
+        return decode_positions(await client.vehicle_positions())
+
     return {
         "arrivals": Feed("arrivals", arrivals, config.polling.arrivals, idle_after=idle, clock=clock),
         "incidents": Feed("incidents", incidents, config.polling.incidents, idle_after=idle, clock=clock),
+        "positions": Feed("positions", positions, config.polling.positions, idle_after=idle, clock=clock),
         "station": Feed("station", station, STATION_CADENCE_S, gated=False, clock=clock),
     }

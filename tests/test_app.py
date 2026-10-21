@@ -130,3 +130,24 @@ async def test_concurrent_requests_at_idle_edge_both_get_fresh_data(fixtures):
             r1, r2 = await asyncio.gather(c.get("/api/board"), c.get("/api/board"))
     assert calls == [1]
     assert r1.json()["notice"] is None and r2.json()["notice"] is None
+
+
+def test_positions_endpoint(app, fixtures):
+    from wmata_board.positions import decode_positions
+    from helpers import state
+    path = sorted((fixtures / "positions").glob("*.pb"))[0]
+    app.state.feeds["positions"].state = state(decode_positions(path.read_bytes()))
+    with TestClient(app) as c:
+        body = c.get("/api/positions").json()
+    assert body["stale"] is False and body["age_s"] == 10
+    assert body["feed_timestamp"] > 0
+    assert len(body["vehicles"]) > 20
+    assert set(body["vehicles"][0]) == {"id", "line", "lat", "lon", "heading", "cars"}
+    assert app.state.feeds["positions"].wanted()
+
+
+def test_positions_before_first_fetch(app):
+    with TestClient(app) as c:
+        body = c.get("/api/positions").json()
+    assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
+                    "error": None, "vehicles": []}

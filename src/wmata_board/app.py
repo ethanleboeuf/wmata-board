@@ -22,6 +22,7 @@ from .board import build_board
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
+from .positions import POSITIONS_STALE_AFTER_S
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_DIR = PROJECT_ROOT / "web"
@@ -81,6 +82,21 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                            incidents=feeds["incidents"].state, station=feeds["station"].state,
                            now=clock(), now_local=datetime.now(tz), version=version)
         return JSONResponse(body, headers=NO_STORE)
+
+    @app.get("/api/positions")
+    async def positions():
+        await want("positions")
+        st = feeds["positions"].state
+        age = st.age(clock())
+        snap = st.value
+        return JSONResponse({
+            "fetched_at": st.fetched_wall.isoformat(timespec="seconds") if st.fetched_wall else None,
+            "feed_timestamp": snap.feed_timestamp if snap else None,
+            "age_s": None if age is None else int(age),
+            "stale": age is None or age > POSITIONS_STALE_AFTER_S,
+            "error": st.error_kind,
+            "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
+        }, headers=NO_STORE)
 
     @app.get("/healthz")
     async def healthz():
