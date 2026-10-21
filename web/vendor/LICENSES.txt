@@ -1,0 +1,9 @@
+Vendored third-party libraries
+
+MapLibre GL JS 4.7.1 - BSD-3-Clause
+  https://github.com/maplibre/maplibre-gl-js
+  files: maplibre-gl.js, maplibre-gl.css
+
+pmtiles 3.2.1 - BSD-3-Clause
+  https://github.com/protomaps/PMTiles
+  file: pmtiles.js (IIFE build, global `pmtiles`)

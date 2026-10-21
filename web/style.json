@@ -1,0 +1,32 @@
+{
+  "version": 8,
+  "name": "Board navy",
+  "sources": {
+    "protomaps": {
+      "type": "vector",
+      "url": "pmtiles://basemap.pmtiles",
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "layers": [
+    {"id": "background", "type": "background", "paint": {"background-color": "#0f151d"}},
+    {"id": "earth", "type": "fill", "source": "protomaps", "source-layer": "earth",
+     "paint": {"fill-color": "#0f151d"}},
+    {"id": "landuse", "type": "fill", "source": "protomaps", "source-layer": "landuse",
+     "paint": {"fill-color": "#151e29"}},
+    {"id": "water", "type": "fill", "source": "protomaps", "source-layer": "water",
+     "paint": {"fill-color": "#0c2742"}},
+    {"id": "buildings", "type": "fill", "source": "protomaps", "source-layer": "buildings", "minzoom": 14,
+     "paint": {"fill-color": "#151e29"}},
+    {"id": "roads-minor", "type": "line", "source": "protomaps", "source-layer": "roads",
+     "filter": ["in", ["get", "kind"], ["literal", ["minor_road", "other"]]],
+     "layout": {"line-cap": "round", "line-join": "round"},
+     "paint": {"line-color": "#24324a",
+               "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 11, 0.3, 13, 0.9, 16, 4]}},
+    {"id": "roads-major", "type": "line", "source": "protomaps", "source-layer": "roads",
+     "filter": ["in", ["get", "kind"], ["literal", ["major_road", "highway"]]],
+     "layout": {"line-cap": "round", "line-join": "round"},
+     "paint": {"line-color": "#33465f",
+               "line-width": ["interpolate", ["exponential", 1.6], ["zoom"], 9, 0.5, 12, 1.4, 16, 7]}}
+  ]
+}

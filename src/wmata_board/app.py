@@ -7,14 +7,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import re
 import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
@@ -28,6 +29,35 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_DIR = PROJECT_ROOT / "web"
 DATA_DIR = PROJECT_ROOT / "data"
 NO_STORE = {"Cache-Control": "no-store, must-revalidate"}
+
+
+_RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)$")
+BASEMAP_HEADERS = {"Accept-Ranges": "bytes", "Cache-Control": "public, max-age=86400"}
+
+
+def range_response(path: Path, range_header: str | None, method: str) -> Response:
+    """Byte-range file serving for the pmtiles protocol (it reads by range)."""
+    size = path.stat().st_size
+    if not range_header:
+        if method == "HEAD":
+            return Response(headers={**BASEMAP_HEADERS, "Content-Length": str(size)},
+                            media_type="application/octet-stream")
+        return FileResponse(path, media_type="application/octet-stream", headers=BASEMAP_HEADERS)
+    m = _RANGE_RE.match(range_header.strip())
+    start = end = None
+    if m and (m[1] or m[2]):
+        if m[1]:
+            start = int(m[1])
+            end = min(int(m[2]), size - 1) if m[2] else size - 1
+        else:
+            start, end = max(0, size - int(m[2])), size - 1
+    if start is None or start >= size or start > end:
+        return Response(status_code=416, headers={"Content-Range": f"bytes */{size}"})
+    with path.open("rb") as f:
+        f.seek(start)
+        body = f.read(end - start + 1)
+    return Response(body, status_code=206, media_type="application/octet-stream",
+                    headers={**BASEMAP_HEADERS, "Content-Range": f"bytes {start}-{end}/{size}"})
 
 
 class _NoStoreStaticFiles(StaticFiles):
@@ -123,6 +153,13 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "feeds": {name: {"age_s": None if (a := f.state.age(now)) is None else int(a),
                              "error": f.state.error_kind} for name, f in feeds.items()},
         }, headers=NO_STORE)
+
+    @app.api_route("/basemap.pmtiles", methods=["GET", "HEAD"])
+    def basemap(request: Request):
+        path = data_dir / "basemap.pmtiles"
+        if not path.is_file():
+            return JSONResponse({"error": "basemap not built; run tools/build_basemap.sh"}, status_code=404)
+        return range_response(path, request.headers.get("range"), request.method)
 
     @app.get("/")
     async def index():
