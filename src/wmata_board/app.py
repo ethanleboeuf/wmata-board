@@ -61,13 +61,16 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     app.state.data_dir = data_dir
 
     async def want(*names: str) -> None:
-        """Mark feeds wanted; if one had gone idle and is due, wait (briefly)
-        for its fetch so the first screen after switching is fresh."""
+        """Mark feeds wanted; if one is due (about to fetch, or fetching now --
+        next_at only advances when a step finishes), wait briefly for that
+        fetch so the first screen after idle is fresh. The event is captured
+        before any await so a fetch that finishes immediately is not missed."""
         waits = []
         for name in names:
             feed = feeds[name]
-            if feed.want() and feed.due() and fresh_wait_s > 0:
-                waits.append(feed.wait_for_update(fresh_wait_s))
+            feed.want()
+            if feed.due() and fresh_wait_s > 0:
+                waits.append(feed.wait_for_update(fresh_wait_s, feed.update_event()))
         if waits:
             await asyncio.gather(*waits)
 

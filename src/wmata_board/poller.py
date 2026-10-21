@@ -81,8 +81,13 @@ class Feed:
         self.state.error, self.state.error_kind = message, kind
         return min(self.cadence * 2 ** self._failures, self._max_backoff)
 
-    async def wait_for_update(self, timeout: float) -> bool:
-        event = self._updated
+    def update_event(self) -> asyncio.Event:
+        """The event the next step() will set. Capture it synchronously, before
+        any await, so a step that finishes in between cannot be missed."""
+        return self._updated
+
+    async def wait_for_update(self, timeout: float, event: asyncio.Event | None = None) -> bool:
+        event = event if event is not None else self._updated
         try:
             await asyncio.wait_for(event.wait(), timeout)
             return True

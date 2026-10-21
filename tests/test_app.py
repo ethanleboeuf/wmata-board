@@ -84,3 +84,49 @@ async def test_first_request_after_idle_waits_for_fresh_data(fixtures):
             body = (await c.get("/api/board")).json()
     assert calls == [1]
     assert body["notice"] is None          # fetched before answering, not "Loading"
+
+
+async def _idle_app(fixtures, fetch):
+    cfg = config()
+    feeds = build_feeds(cfg, FixtureClient(fixtures))
+    feeds["arrivals"] = Feed("arrivals", fetch, 20.0)
+    return create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=2.0)
+
+
+async def test_instant_fetch_does_not_block_first_request(fixtures):
+    """A fetch that never suspends finishes before the waiter starts; must not wait fresh_wait_s."""
+    import time
+
+    import httpx
+
+    async def instant_fetch():
+        return arrivals_state().value
+
+    app = await _idle_app(fixtures, instant_fetch)
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            t0 = time.monotonic()
+            body = (await c.get("/api/board")).json()
+            elapsed = time.monotonic() - t0
+    assert elapsed < 1.0
+    assert body["notice"] is None
+
+
+async def test_concurrent_requests_at_idle_edge_both_get_fresh_data(fixtures):
+    import httpx
+
+    calls = []
+
+    async def slow_fetch():
+        await asyncio.sleep(0.05)
+        calls.append(1)
+        return arrivals_state().value
+
+    app = await _idle_app(fixtures, slow_fetch)
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            r1, r2 = await asyncio.gather(c.get("/api/board"), c.get("/api/board"))
+    assert calls == [1]
+    assert r1.json()["notice"] is None and r2.json()["notice"] is None
