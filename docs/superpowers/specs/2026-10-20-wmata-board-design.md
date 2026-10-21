@@ -177,7 +177,7 @@ committed.
 ## Deployment
 
 - GitHub private repo `wmata-board`; Pi: `git clone` to `~/wmata-board`, `python3 -m venv .venv`, `pip install -e .`.
-- `deploy/wmata-board.service`: `systemd --user` unit (like skyview's): `Type=exec`, `Restart=always`, `RestartSec=5`, `TimeoutStopSec=10`, journal output, `EnvironmentFile=%h/wmata-board/.env`.
+- `deploy/wmata-board.service`: `systemd --user` unit (like skyview's): `Type=exec`, `Restart=always`, `RestartSec=5`, `TimeoutStopSec=10`, journal output, `EnvironmentFile=%h/wmata-board.env` (outside the repo, `chmod 600`, like `~/map-journal.env`).
 - kiosk-selector: add `"metro": "http://localhost:8766/"` to `~/kiosk-selector/targets.py`, commit there, restart it.
 - Tailscale: `tailscale serve --bg --https=8446 http://127.0.0.1:8766`.
 - Basemap: run `tools/build_basemap.sh` once on the Pi (downloads the extract into `data/`).
@@ -206,5 +206,5 @@ GTFS-RT feed carries occupancy), multi-station layouts.
 
 ## Needs from Ethan
 
-- A WMATA API key (developer.wmata.com → subscribe to the Default Tier), put in `~/wmata-board/.env` on the Pi.
-- An empty private GitHub repo named `wmata-board` (or OK to install the GitHub CLI so I can create it).
+- ~~WMATA API key~~ done: primary key in `~/wmata-board.env` on the Pi (verified 200 on 2026-10-20).
+- ~~GitHub repo~~ done: `git@github.com:ethanleboeuf/wmata-board.git`.
