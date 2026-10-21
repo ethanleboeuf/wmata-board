@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         schedule_loader = None
         if config.commute is not None:
             stations = config.commute.stations
-            schedule_loader = NetworkCache(client, DATA_DIR / "schedule.json", key=",".join(stations),
+            schedule_loader = NetworkCache(client, DATA_DIR / "schedule.json", key="v2:" + ",".join(stations),
                                            build=partial(build_schedule, stations=stations))
         if config.api_key is None:
             log.warning("no WMATA_API_KEY set: the board will say so until one is configured")

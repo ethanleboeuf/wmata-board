@@ -54,10 +54,22 @@ class FixtureClient:
         return feed.SerializeToString()
 
     async def trip_updates(self) -> bytes:
+        """Shifted to now (like the positions) so the phone's trip cards have a
+        future. The timetable isn't shifted, so 'min late' is off in this mode."""
         try:
-            return (self._root / "trip_updates.pb").read_bytes()
+            data = (self._root / "trip_updates.pb").read_bytes()
         except FileNotFoundError:
             raise WmataError("http", "fixture trip_updates.pb missing") from None
+        feed = gtfs_realtime_pb2.FeedMessage()
+        feed.ParseFromString(data)
+        shift = int(time.time()) - feed.header.timestamp
+        feed.header.timestamp += shift
+        for entity in feed.entity:
+            for stu in entity.trip_update.stop_time_update:
+                for event in (stu.arrival, stu.departure):
+                    if event.time:
+                        event.time += shift
+        return feed.SerializeToString()
 
     async def gtfs_static(self) -> bytes:
         raise WmataError("http", "fixtures mode has no GTFS static zip (uses network.json)")

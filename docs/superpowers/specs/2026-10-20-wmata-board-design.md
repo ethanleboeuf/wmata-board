@@ -237,6 +237,26 @@ in chat (no separate spec/plan):
 - Observation from the timetable: Silver trains connect to Red at Metro
   Center in ~2 min, Orange in ~6.
 
+## Phone trip cards (added 2026-10-21)
+
+- Tap a train on the phone map (nearest drawn badge within 24 px; the overlay
+  still ignores pointer events so pans/pinches reach the map) or a commute row
+  to open a floating card, refreshed every 15 s while open. The wall is
+  unchanged.
+- Map train: line, destination, cars, next 5 stops with times, and minutes
+  late/early when the trip still has a commute station ahead (WMATA's trip
+  updates carry no delay field, and the cached timetable only holds commute
+  stations). Commute row: both legs from boarding to alighting, with the
+  Metro Center wait and the shuttle step.
+- `/api/positions` vehicles carry `trip_id`; the trips feed now decodes every
+  station. `GET /api/trip/{id}[?at=H:MM]` -> `{id, line, destination, cars,
+  delay_s, live, stops: [{code, name, time, t}]}`, live first, else the
+  timetable (commute stations only); 404 for unknown/cancelled trips.
+  Commute rows carry `legs: [{trip, line, from, to}]`. The timetable cache
+  stores headsigns (cache key bumped to `v2:` so it rebuilds).
+- Fixtures mode shifts the recorded trip updates to now (like positions); the
+  timetable isn't shifted, so "min late" is meaningless there.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by

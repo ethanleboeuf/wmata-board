@@ -78,3 +78,11 @@ export function mergeAlerts(boardAlerts, commuteAlerts) {
   }
   return out;
 }
+
+// Trip card: how far off the timetable a train is ("" when unknown).
+export function delayText(delayS) {
+  if (delayS === null || delayS === undefined) return "";
+  const m = Math.round(Math.abs(delayS) / 60);
+  if (m === 0) return "On time";
+  return `${m} min ${delayS > 0 ? "late" : "early"}`;
+}

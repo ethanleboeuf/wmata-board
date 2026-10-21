@@ -34,10 +34,17 @@ NOTICE_UNAVAILABLE = "Commute times unavailable"
 
 @dataclass(frozen=True, slots=True)
 class Leg:
+    trip: str
     line: str
+    origin: str
+    dest: str
     depart: float
     arrive: float
     live: bool
+
+    def as_json(self) -> dict:
+        """What the phone needs to fetch and trim this leg's trip card."""
+        return {"trip": self.trip, "line": self.line, "from": self.origin, "to": self.dest}
 
 
 def departures(trips: Iterable[Trip], a: str, b: str, after: float) -> list[Leg]:
@@ -52,7 +59,7 @@ def departures(trips: Iterable[Trip], a: str, b: str, after: float) -> list[Leg]
                         break
                     dep = s.depart
             elif s.code == b:
-                legs.append(Leg(t.line, dep, s.arrive, t.live))
+                legs.append(Leg(t.id, t.line, a, b, dep, s.arrive, t.live))
                 break
     return sorted(legs, key=lambda x: (x.depart, x.arrive))
 
@@ -117,7 +124,7 @@ def plan_morning(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo
             "brookland": clock(second.arrive, tz), "shuttle": clock(shuttle, tz),
             "spare": _min(shuttle) - _min(second.arrive),
             "target": slot in cfg.shuttles, "late": bool(cfg.shuttles) and slot > max(cfg.shuttles),
-            "live": first.live and second.live,
+            "live": first.live and second.live, "legs": [first.as_json(), second.as_json()],
         })
         if len(rows) == cfg.rows:
             break
@@ -132,7 +139,8 @@ def _home_from(trips: list[Trip], cfg: CommuteConfig, origin: str, now: float) -
 def _home_row(first: Leg, second: Leg, tz: ZoneInfo) -> dict:
     return {"red_leave": clock(first.depart, tz), "mc_arrive": clock(first.arrive, tz),
             "line": second.line, "mc_wait": _min(second.depart) - _min(first.arrive),
-            "home": clock(second.arrive, tz), "live": first.live and second.live}
+            "home": clock(second.arrive, tz), "live": first.live and second.live,
+            "legs": [first.as_json(), second.as_json()]}
 
 
 def plan_from_hospital(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo) -> list[dict]:

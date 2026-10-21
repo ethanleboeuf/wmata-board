@@ -54,7 +54,8 @@ def test_decode_rejects_garbage():
 def gtfs_zip() -> bytes:
     files = {
         "calendar_dates.txt": "service_id,date,exception_type\nWK,20261022,1\nWK,20261023,1\nSA,20261024,1\nWK,20261026,2\n",
-        "trips.txt": "route_id,service_id,trip_id,shape_id\nSILVER,WK,t1,s\nRED,WK,t2,s\nBUS,WK,t3,s\nRED,SA,t4,s\n",
+        "trips.txt": "route_id,service_id,trip_id,shape_id,trip_headsign\nSILVER,WK,t1,s,Largo\n"
+                     "RED,WK,t2,s,Glenmont\nBUS,WK,t3,s,X\nRED,SA,t4,s,Glenmont\n",
         "stop_times.txt": "trip_id,arrival_time,departure_time,stop_id,stop_sequence\n"
                           "t1,07:20:00,07:20:00,PF_N06_C,1\n"          # terminal: sets start, not a commute stop
                           "t1,07:38:00,07:38:30,PF_K01_C,10\n"
@@ -74,8 +75,8 @@ def gtfs_zip() -> bytes:
 
 def test_build_schedule():
     s = build_schedule(gtfs_zip(), STATIONS)
-    assert s["trips"] == [["t1", "WK", "SV", 7 * 3600 + 1200, [["K01", 27480, 27510], ["C01", 28140, 28170]]],
-                          ["t4", "SA", "RD", 25 * 3600 + 600, [["A01", 90600, 90600], ["B05", 91320, 91320]]]]
+    assert s["trips"] == [["t1", "WK", "SV", 7 * 3600 + 1200, [["K01", 27480, 27510], ["C01", 28140, 28170]], "Largo"],
+                          ["t4", "SA", "RD", 25 * 3600 + 600, [["A01", 90600, 90600], ["B05", 91320, 91320]], "Glenmont"]]
     assert s["services"] == {"WK": ["20261022", "20261023"], "SA": ["20261024"]}
     assert s["names"] == {"K01": "Court House", "A01": "Metro Center", "C01": "Metro Center", "B07": "Takoma"}
 
@@ -83,7 +84,8 @@ def test_build_schedule():
 def test_scheduled_trips_for_a_day():
     s = build_schedule(gtfs_zip(), STATIONS)
     [(trip, start)] = scheduled_trips(s, date(2026, 10, 22), ET)
-    assert trip == Trip("t1", "SV", (Stop("K01", at("7:38"), at("7:38:30")), Stop("C01", at("7:49"), at("7:49:30"))), False)
+    assert trip == Trip("t1", "SV", (Stop("K01", at("7:38"), at("7:38:30")), Stop("C01", at("7:49"), at("7:49:30"))),
+                        False, headsign="Largo")
     assert start == at("7:20")
     assert scheduled_trips(s, date(2026, 10, 25), ET) == []
     # GTFS times past 24h belong to the service day they started on.
@@ -166,3 +168,16 @@ def test_unlisted_timetable_trips_are_dropped_inside_the_live_horizon_only():
 def test_added_live_trips_are_kept():
     out = merged([], live("extra", ("B07", "7:40"), ("A01", "7:58"), ("B05", None)))
     assert [x.code for x in out["extra"].stops] == ["B07", "A01"]
+
+
+async def test_fixture_trip_updates_are_shifted_to_now(fixtures):
+    import time
+
+    from wmata_board.fixtures import FixtureClient
+
+    raw = decode_trip_updates((fixtures / "trip_updates.pb").read_bytes())
+    now = decode_trip_updates(await FixtureClient(fixtures).trip_updates())
+    shift = now.feed_timestamp - raw.feed_timestamp
+    assert abs(now.feed_timestamp - time.time()) < 5
+    tid, trip = next((k, t) for k, t in raw.trips.items() if t.stops and t.stops[0][1])
+    assert now.trips[tid].stops[0][1] == trip.stops[0][1] + shift

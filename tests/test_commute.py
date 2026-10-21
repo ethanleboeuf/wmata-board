@@ -96,6 +96,8 @@ def test_morning_rows_connect_on_seconds():
     assert not any(r["late"] for r in rows)
     assert rows[0]["line"] == "SV" and rows[1]["line"] == "OR"
     assert rows[0]["mc_arrive"] == "7:49"
+    assert rows[0]["legs"] == [{"trip": "sv738", "line": "SV", "from": "K01", "to": "C01"},
+                               {"trip": "r751", "line": "RD", "from": "A01", "to": "B05"}]
 
 
 def test_morning_skips_trains_reaching_shuttles_well_before_the_targets():
@@ -136,7 +138,9 @@ def test_evening_from_hospital():
     rows = plan_from_hospital(EVENING, replace(CFG, rows=3), at("17:01"), ET)
     # 17:06 shuttle -> Brookland 17:16, platform by 17:19 -> Red 17:19 -> MC 17:31 -> 17:33 OR (2 min walk)
     assert rows[0] == {"shuttle": "5:06", "brookland": "5:16", "red_leave": "5:19", "mc_arrive": "5:31",
-                       "line": "OR", "mc_wait": 2, "home": "5:43", "live": False}
+                       "line": "OR", "mc_wait": 2, "home": "5:43", "live": False,
+                       "legs": [{"trip": "r519", "line": "RD", "from": "B05", "to": "A01"},
+                                {"trip": "o533", "line": "OR", "from": "C01", "to": "K01"}]}
     # 17:12 shuttle -> 17:22 -> Red 17:25 -> MC 17:37 -> 17:40 SV
     assert (rows[1]["shuttle"], rows[1]["red_leave"], rows[1]["line"], rows[1]["home"]) == ("5:12", "5:25", "SV", "5:50")
     assert len(rows) == 2   # nothing for the 17:18 shuttle
@@ -145,7 +149,9 @@ def test_evening_from_hospital():
 def test_evening_from_takoma():
     rows = plan_from_station(EVENING, CFG, at("17:00"), ET)
     assert rows == [{"red_leave": "5:10", "mc_arrive": "5:28", "line": "OR", "mc_wait": 5,
-                     "home": "5:43", "live": False}]
+                     "home": "5:43", "live": False,
+                     "legs": [{"trip": "t510", "line": "RD", "from": "B07", "to": "A01"},
+                              {"trip": "o533", "line": "OR", "from": "C01", "to": "K01"}]}]
 
 
 # ---- payload ----------------------------------------------------------------------

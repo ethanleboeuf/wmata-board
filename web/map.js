@@ -1,6 +1,8 @@
 // Shared map: MapLibre draws only the Board-navy basemap; an SVG overlay on
 // top draws lanes, stations, labels, landmarks and gliding trains, re-projected
 // with map.project() on every move so the wall and the phone share this file.
+// The overlay never takes pointer events (pans and pinches reach the map);
+// the phone hit-tests taps against the drawn trains with trainAt().
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
@@ -163,6 +165,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   // ---- trains ----
   const glider = new Glider();
   const els = new Map();
+  const info = new Map();   // vehicle id -> {line, cars, trip_id} from the last snapshot
   let stale = true;
   let lastGoodMs = performance.now();
 
@@ -182,7 +185,9 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         setStale(body.stale);
         if (body.feed_timestamp !== null) {
           const vs = [];
+          info.clear();
           for (const v of body.vehicles) {
+            info.set(v.id, { line: v.line, cars: v.cars, trip_id: v.trip_id ?? null });
             const track = tracks[v.line];
             if (!track) continue;
             const { s } = snapToTrack(track, mercator(v.lon, v.lat));
@@ -232,6 +237,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       e.g.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
       e.dir.setAttribute("transform", `rotate(${deg.toFixed(0)})`);
       e.g.style.opacity = v.opacity.toFixed(2);
+      e.x = x; e.y = y; e.opacity = v.opacity;
       if (x > 0 && y > 0 && x < W && y < H && v.opacity > 0.5) visible++;
       seen.add(v.id);
     }
@@ -267,5 +273,14 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       else map.fitBounds([[w, s], [e, n]], { duration: 600, padding: pad() });
     },
     destroy() { ro.disconnect(); map.remove(); },
+    // The drawn train nearest a screen point (map container px), within `radius`.
+    trainAt(x, y, radius = 24) {
+      let best = null, bestD = radius;
+      for (const [id, e] of els) {
+        const d = Math.hypot(e.x - x, e.y - y);
+        if (e.opacity > 0.5 && d <= bestD) { best = id; bestD = d; }
+      }
+      return best === null ? null : { id: best, line: els.get(best).line, ...info.get(best) };
+    },
   };
 }

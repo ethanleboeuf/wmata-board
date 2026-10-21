@@ -1,7 +1,8 @@
 """GTFS-RT rail vehicle positions -> the trains the map draws. Pure.
 
 `vehicle.license_plate` is "<cars>_<car numbers>" (e.g. "8_7202-7203...").
-Only revenue trains on one of the six lines are kept.
+Only revenue trains on one of the six lines are kept. `trip_id` links a train
+to its live stop predictions (trips.py) for the phone's tap-for-details card.
 """
 
 from __future__ import annotations
@@ -25,10 +26,11 @@ class Vehicle:
     lon: float
     heading: float | None
     cars: int | None
+    trip_id: str | None = None
 
     def as_json(self) -> dict:
         return {"id": self.id, "line": self.line, "lat": self.lat, "lon": self.lon,
-                "heading": self.heading, "cars": self.cars}
+                "heading": self.heading, "cars": self.cars, "trip_id": self.trip_id}
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,5 +64,6 @@ def decode_positions(data: bytes) -> PositionsSnapshot:
             lat=round(pos.latitude, 6), lon=round(pos.longitude, 6),
             heading=round(pos.bearing, 1) if pos.HasField("bearing") else None,
             cars=cars_from_plate(v.vehicle.license_plate),
+            trip_id=v.trip.trip_id or None,
         ))
     return PositionsSnapshot(int(feed.header.timestamp), tuple(vehicles))

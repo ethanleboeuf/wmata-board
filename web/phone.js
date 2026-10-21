@@ -1,9 +1,10 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
-// and every alert (no rotation -- there's room to list them).
+// and every alert (no rotation -- there's room to list them). Tapping a train
+// on the map or a commute row opens a trip card.
 import { formatClock, pillState, arrivalsExpired, mergeAlerts } from "./format.js";
-import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml } from "./render.js";
+import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, trainCardHtml, commuteCardHtml } from "./render.js";
 import { createMap } from "./map.js";
-import { startCommute } from "./commute.js";
+import { startCommute, tripQuery } from "./commute.js";
 
 const $ = id => document.getElementById(id);
 const startMs = Date.now();
@@ -48,6 +49,8 @@ function renderCommute() {
   el.innerHTML = !commute ? "" : commute.mode === "am" ? commuteAmHtml(commute) : commutePmHtml(commute, origin);
 }
 $("commute").addEventListener("click", ev => {
+  const row = ev.target.closest("[data-i]");
+  if (row && commute) { openCommuteRow(Number(row.dataset.i)); return; }
   const tab = ev.target.closest("[data-origin]");
   if (!tab) return;
   origin = tab.dataset.origin;
@@ -60,6 +63,50 @@ const commutePoller = startCommute(c => { commute = c; renderCommute(); renderAl
 function renderAlerts() {
   $("alerts").innerHTML = mergeAlerts(board?.alerts, commute?.alerts)
     .map(a => `<div class="alert">${alertHtml(a)}</div>`).join("");
+}
+
+// ---- trip card: one floating card, refreshed while open ----
+const CARD_REFRESH_MS = 15000;
+let card = null;   // {load: async () => html} while open
+async function fetchTrip(id) {
+  try {
+    const r = await fetch(`/api/trip/${encodeURIComponent(id)}${tripQuery()}`,
+                          { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+function showCard(html) {
+  $("card").innerHTML = `<button class="tclose" aria-label="Close">✕</button>${html}`;
+  $("card").hidden = false;
+}
+async function openCard(next) {
+  card = next;
+  showCard(next.loading);
+  while (card === next) {
+    const html = await next.load();
+    if (card !== next) return;
+    showCard(html);
+    await new Promise(res => setTimeout(res, CARD_REFRESH_MS));
+  }
+}
+function closeCard() { card = null; $("card").hidden = true; }
+$("card").addEventListener("click", ev => { if (ev.target.closest(".tclose")) closeCard(); });
+
+function openTrain(train) {
+  openCard({
+    loading: trainCardHtml(train, null).replace("No stop predictions for this train", "Loading…"),
+    load: async () => trainCardHtml(train, train.trip_id ? await fetchTrip(train.trip_id) : null),
+  });
+}
+function openCommuteRow(i) {
+  const kind = commute.mode === "am" ? "am" : origin === "station" ? "station" : "hospital";
+  const rows = kind === "am" ? commute.am.rows : kind === "station" ? commute.pm.station : commute.pm.hospital;
+  const row = rows[i];
+  if (!row?.legs) return;
+  openCard({
+    loading: commuteCardHtml(row, kind, [undefined, undefined]),
+    load: async () => commuteCardHtml(row, kind, await Promise.all(row.legs.map(l => fetchTrip(l.trip)))),
+  });
 }
 
 // Coming back from the background: don't show a false red "Board offline" while
@@ -126,6 +173,11 @@ function startMap() {
       // Allow zooming out to the whole system, but not off into the void.
       m.map.setMaxBounds([[-77.75, 38.6], [-76.6, 39.3]]);
       m.map.setMinZoom(8.5);
+      // A tap (not a pan) near a train opens its card; anywhere else closes it.
+      m.map.on("click", ev => {
+        const train = m.trainAt(ev.point.x, ev.point.y);
+        if (train) openTrain(train); else closeCard();
+      });
     })
     .catch(err => {
       console.error("map failed; retrying in 30 s", err);

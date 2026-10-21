@@ -43,3 +43,27 @@ body.phone * { box-sizing: border-box; }
 .phone .sched { font-size: 8px; letter-spacing: .5px; padding: 1px 3px; border-width: 1px; border-radius: 4px; }
 .phone .ctabs { gap: 8px; margin: 2px 0 8px; }
 .phone .ctab { font-size: 13px; padding: 6px 14px; border-width: 1px; min-height: 32px; }
+
+/* Trip card (tap a train or a commute row). Floats above the sheet. */
+.tcard { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); z-index: 6;
+         max-height: 64vh; overflow-y: auto; background: #0d1117; border: 1px solid #2a313c; border-radius: 14px;
+         padding: 12px 14px 10px; box-shadow: 0 10px 30px rgba(0,0,0,.55); touch-action: pan-y; }
+.tcard[hidden] { display: none; }
+.tclose { position: absolute; top: 4px; right: 4px; width: 44px; height: 44px; border: 0; background: transparent;
+          color: #8b95a3; font-size: 18px; }
+.tcard h3 { margin: 2px 44px 8px 0; font-size: 16px; font-weight: 800; }
+.thead { display: flex; align-items: center; gap: 10px; margin-right: 40px; }
+.thead .chip { width: 30px; height: 30px; font-size: 12px; flex: none; }
+.tdest { font-size: 18px; font-weight: 800; }
+.tmeta { margin: 4px 0 4px 40px; font-size: 12px; font-weight: 600; color: #8b95a3; }
+.tstops { margin: 4px 0 2px 40px; }
+.tstop { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c222b;
+         font-size: 14px; font-weight: 600; color: #aab3c0; font-variant-numeric: tabular-nums; }
+.tstop:last-child { border-bottom: 0; }
+.tstop.end { color: #f2f4f7; font-weight: 800; }
+.tnone { margin: 6px 0 4px 40px; font-size: 14px; color: #5d6875; font-weight: 600; }
+.tstep { margin: 8px 0; padding: 6px 10px; border-radius: 8px; background: #151e29; font-size: 12px; font-weight: 700;
+         letter-spacing: .5px; color: #f7c3cc; text-transform: uppercase; }
+.trip + .trip { margin-top: 10px; }
+.phone #commute .crow[data-i] { cursor: pointer; }
+.phone #commute .crow[data-i]:active { background: #151e29; }

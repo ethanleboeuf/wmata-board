@@ -13,6 +13,12 @@ function previewQuery() {
   return q.toString() ? `?${q}` : "";
 }
 
+// /api/trip suffix: a commute preview's trips are looked up in the timetable at that time.
+export function tripQuery() {
+  const at = new URLSearchParams(location.search).get("at");
+  return at ? `?at=${encodeURIComponent(at)}` : "";
+}
+
 export function startCommute(onChange) {
   let current = null, okMs = null, timer = null;
   const set = value => { current = value; onChange(value); };

@@ -22,6 +22,8 @@ def feed(*entities, ts=1792551838):
         v = e.vehicle
         if route is not None:
             v.trip.route_id = route
+            if i == 0:
+                v.trip.trip_id = "t-or-1"
         if has_pos:
             v.position.latitude, v.position.longitude = lat, lon
             if bearing is not None:
@@ -43,7 +45,9 @@ def test_synthetic_feed_filters_and_maps():
         [("v0", "OR", 8, 90.0), ("v1", "SV", None, None)]
     assert snap.vehicles[0].lat == pytest.approx(38.89, abs=1e-5)
     assert snap.vehicles[0].as_json() == {"id": "v0", "line": "OR", "lat": snap.vehicles[0].lat,
-                                          "lon": snap.vehicles[0].lon, "heading": 90.0, "cars": 8}
+                                          "lon": snap.vehicles[0].lon, "heading": 90.0, "cars": 8,
+                                          "trip_id": "t-or-1"}
+    assert snap.vehicles[1].trip_id is None
 
 
 def test_recorded_snapshot(fixtures):

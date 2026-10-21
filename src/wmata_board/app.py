@@ -20,17 +20,20 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .board import build_board
-from .commute import AM, PM, build_commute, commute_mode
+from .commute import AM, PM, build_commute, commute_mode, live_updates
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
 from .state import FeedState
+from .tripinfo import station_names, trip_detail
+from .trips import scheduled_trips
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_DIR = PROJECT_ROOT / "web"
 DATA_DIR = PROJECT_ROOT / "data"
 NO_STORE = {"Cache-Control": "no-store, must-revalidate"}
+AT_PATTERN = r"^([01]?\d|2[0-3]):[0-5]\d$"   # ?at=H:MM previews
 
 
 _RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)$")
@@ -137,7 +140,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
 
     @app.get("/api/commute")
     async def commute(mode: str | None = Query(None, pattern=f"^({AM}|{PM})$"),
-                      at: str | None = Query(None, pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")):
+                      at: str | None = Query(None, pattern=AT_PATTERN)):
         """`mode` and `at` (H:MM today) are for previewing a panel off-hours. A
         preview at another time plans on the timetable alone: the live feed
         describes now, and would drop that time's trains as not running."""
@@ -145,10 +148,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         if cfg is None:
             return JSONResponse({"mode": None}, headers=NO_STORE)
         wall_now = wall_clock()
-        now = wall_now
-        if at:
-            h, m = (int(x) for x in at.split(":"))
-            now = datetime.fromtimestamp(wall_now, tz).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+        now = preview_time(wall_now, at)
         if mode or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
             await want(*(("incidents",) if at else ("trips", "incidents")))
         sched = feeds.get("schedule")
@@ -156,6 +156,32 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                              updates=FeedState() if at else feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
                              wall_now=wall_now, mode=mode, incidents=feeds["incidents"].state)
         return JSONResponse(body, headers=NO_STORE)
+
+    def preview_time(wall_now: float, at: str | None) -> float:
+        if not at:
+            return wall_now
+        h, m = (int(x) for x in at.split(":"))
+        return datetime.fromtimestamp(wall_now, tz).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+
+    @app.get("/api/trip/{trip_id}")
+    async def trip(trip_id: str, at: str | None = Query(None, pattern=AT_PATTERN)):
+        """One train for the phone's tap card. `at` (a commute preview) uses the
+        timetable alone, like /api/commute."""
+        wall_now = wall_clock()
+        now = preview_time(wall_now, at)
+        trips_feed = feeds.get("trips")
+        if trips_feed is not None and not at:
+            await want("trips")
+        live = None if at or trips_feed is None else live_updates(trips_feed.state, clock(), wall_now)
+        sched_feed, net_feed = feeds.get("schedule"), feeds.get("network")
+        schedule = sched_feed.state.value if sched_feed else None
+        scheduled = [t for t, _ in scheduled_trips(schedule, datetime.fromtimestamp(now, tz).date(), tz)] if schedule else []
+        detail = trip_detail(trip_id, live=live, scheduled=scheduled,
+                             names=station_names(net_feed.state.value if net_feed else None, schedule),
+                             positions=feeds["positions"].state.value, now=now, tz=tz)
+        if detail is None:
+            return JSONResponse({"error": "unknown trip"}, status_code=404, headers=NO_STORE)
+        return JSONResponse(detail, headers=NO_STORE)
 
     @app.get("/api/network")
     async def network():

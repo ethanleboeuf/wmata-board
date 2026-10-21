@@ -44,10 +44,8 @@ def build_feeds(config: Config, client, *, network_loader=None, schedule_loader=
     if network_loader is not None:   # hourly check; the cache decides when to download
         feeds["network"] = Feed("network", network_loader.load, 3600.0, gated=False, clock=clock)
     if config.commute is not None:
-        commute_stations = config.commute.stations
-
         async def trips():
-            return decode_trip_updates(await client.trip_updates(), commute_stations)
+            return decode_trip_updates(await client.trip_updates())   # all stations: trip cards
 
         feeds["trips"] = Feed("trips", trips, config.polling.trips, idle_after=idle, clock=clock)
         if schedule_loader is not None:

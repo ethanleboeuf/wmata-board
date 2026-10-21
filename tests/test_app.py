@@ -144,7 +144,7 @@ def test_positions_endpoint(app, fixtures):
     assert body["stale"] is False and body["age_s"] == 10
     assert body["feed_timestamp"] > 0
     assert len(body["vehicles"]) > 20
-    assert set(body["vehicles"][0]) == {"id", "line", "lat", "lon", "heading", "cars"}
+    assert set(body["vehicles"][0]) == {"id", "line", "lat", "lon", "heading", "cars", "trip_id"}
     assert app.state.feeds["positions"].wanted()
 
 
@@ -276,3 +276,51 @@ def test_phone_page_is_installable(app):
     assert all(i.status_code == 200 and i.content[:4] == b"\x89PNG" for i in icons)
     assert 'rel="manifest" href="/manifest.webmanifest"' in page
     assert 'rel="apple-touch-icon" href="/static/icons/icon-180.png"' in page
+
+
+@pytest.fixture
+def trip_app(fixtures):
+    """Live trips, positions and timetable from the same recording, with the
+    wall clock pinned to it so the live feed counts as fresh."""
+    from zoneinfo import ZoneInfo
+
+    from wmata_board.trips import FixtureSchedule, decode_trip_updates
+
+    cfg = config()
+    clock = Clock()
+    client = FixtureClient(fixtures)
+    feeds = build_feeds(cfg, client, clock=clock, network_loader=FixtureNetwork(fixtures / "network.json"),
+                        schedule_loader=FixtureSchedule(fixtures / "schedule.json", ZoneInfo(cfg.board.timezone)))
+    for name in ("schedule", "network", "positions"):
+        feeds[name].state.value = asyncio.run(feeds[name]._fetch())
+    upd = decode_trip_updates((fixtures / "trip_updates.pb").read_bytes())
+    feeds["trips"].state.value, feeds["trips"].state.fetched_at = upd, clock.t
+    app = create_app(cfg, client, feeds=feeds, version="test", fresh_wait_s=0, start_polling=False,
+                     clock=clock, wall_clock=lambda: float(upd.feed_timestamp))
+    app.state.updates = upd
+    return app
+
+
+def test_trip_endpoint_live(trip_app):
+    vehicles = trip_app.state.feeds["positions"].state.value.vehicles
+    v = next(v for v in vehicles if v.line == "RD" and v.trip_id in trip_app.state.updates.trips
+             and len(trip_app.state.updates.trips[v.trip_id].stops) >= 3)
+    with TestClient(trip_app) as c:
+        r = c.get(f"/api/trip/{v.trip_id}")
+    body = r.json()
+    assert r.status_code == 200 and r.headers["cache-control"].startswith("no-store")
+    assert body["live"] is True and body["line"] == "RD" and body["cars"] == v.cars
+    assert body["destination"] and len(body["stops"]) >= 2
+    assert all(s["name"] != s["code"] for s in body["stops"])   # names from the network
+    assert trip_app.state.feeds["trips"].wanted()
+
+
+def test_trip_endpoint_timetable_preview_and_404(trip_app):
+    with TestClient(trip_app) as c:
+        row = c.get("/api/commute?mode=am&at=7:20").json()["am"]["rows"][0]
+        leg = row["legs"][0]
+        body = c.get(f"/api/trip/{leg['trip']}?at=7:20").json()
+        missing = c.get("/api/trip/no-such-trip")
+    assert body["live"] is False and body["line"] == leg["line"]
+    assert [s["code"] for s in body["stops"]][:2] == ["K01", "C01"]
+    assert missing.status_code == 404 and missing.json() == {"error": "unknown trip"}

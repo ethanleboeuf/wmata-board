@@ -3,7 +3,7 @@
 Two sources, merged by trip_id (they share ids):
 
 - the GTFS static timetable, reduced by `build_schedule` to the trips that
-  call at two or more of the stations we care about;
+  call at two or more of the stations we care about (with their headsigns);
 - GTFS-RT trip updates (`decode_trip_updates`), which predict every
   not-yet-passed stop of each running trip, and of trips starting within
   ~40 min (so 70-90 min ahead at a given station).
@@ -66,6 +66,7 @@ class Trip:
     line: str
     stops: tuple[Stop, ...]    # in calling order
     live: bool
+    headsign: str = ""         # timetable trips only
 
 
 # ---- live ------------------------------------------------------------------
@@ -85,8 +86,10 @@ class TripUpdates:
     trips: dict[str, LiveTrip]
 
 
-def decode_trip_updates(data: bytes, stations: Iterable[str]) -> TripUpdates:
-    wanted = set(stations)
+def decode_trip_updates(data: bytes, stations: Iterable[str] | None = None) -> TripUpdates:
+    """`stations` None keeps every station (the phone's trip card shows them all;
+    the commute planner only looks at its own)."""
+    wanted = None if stations is None else set(stations)
     feed = gtfs_realtime_pb2.FeedMessage()
     try:
         feed.ParseFromString(data)
@@ -103,7 +106,7 @@ def decode_trip_updates(data: bytes, stations: Iterable[str]) -> TripUpdates:
         stops, skipped = [], set()
         for s in tu.stop_time_update:
             code = station_code(s.stop_id)
-            if code not in wanted:
+            if code is None or (wanted is not None and code not in wanted):
                 continue
             if s.schedule_relationship == _STU.SKIPPED:
                 skipped.add(code)
@@ -130,7 +133,7 @@ def _seconds(hms: str) -> int:
 
 def build_schedule(data: bytes, stations: Iterable[str]) -> dict:
     """{"stations", "names": {code: name}, "services": {service_id: [YYYYMMDD]},
-    "trips": [[trip_id, service_id, line, start_s, [[code, arr_s, dep_s], ...]]]}.
+    "trips": [[trip_id, service_id, line, start_s, [[code, arr_s, dep_s], ...], headsign]]}.
     Times are GTFS seconds after the service day's midnight (may pass 24 h).
     WMATA publishes service days in calendar_dates.txt only."""
     wanted = set(stations)
@@ -139,7 +142,7 @@ def build_schedule(data: bytes, stations: Iterable[str]) -> dict:
         for r in _rows(z, "calendar_dates.txt"):
             if r["exception_type"] == "1":
                 services[r["service_id"]].append(r["date"])
-        trips = {r["trip_id"]: (r["service_id"], ROUTE_LINES[r["route_id"]])
+        trips = {r["trip_id"]: (r["service_id"], ROUTE_LINES[r["route_id"]], r.get("trip_headsign", ""))
                  for r in _rows(z, "trips.txt") if r["route_id"] in ROUTE_LINES}
         start: dict[str, int] = {}
         calls: dict[str, list[tuple[int, str, int, int]]] = defaultdict(list)
@@ -160,8 +163,8 @@ def build_schedule(data: bytes, stations: Iterable[str]) -> dict:
     out = []
     for tid, seq in calls.items():
         if len(seq) >= 2:
-            sid, line = trips[tid]
-            out.append([tid, sid, line, start[tid], [[c, a, d] for _, c, a, d in sorted(seq)]])
+            sid, line, headsign = trips[tid]
+            out.append([tid, sid, line, start[tid], [[c, a, d] for _, c, a, d in sorted(seq)], headsign])
     used = {t[1] for t in out}
     return {"stations": sorted(wanted), "names": {c: names[c] for c in sorted(wanted) if c in names},
             "services": {sid: sorted(ds) for sid, ds in services.items() if sid in used},
@@ -178,10 +181,12 @@ def scheduled_trips(schedule: dict, day: date, tz: ZoneInfo) -> list[tuple[Trip,
     active = {sid for sid, dates in schedule["services"].items() if ymd in dates}
     base = _midnight(day, tz)
     out = []
-    for tid, sid, line, start_s, calls in schedule["trips"]:
+    for row in schedule["trips"]:
+        tid, sid, line, start_s, calls = row[:5]
         if sid in active:
             stops = tuple(Stop(c, base + a, base + d) for c, a, d in calls)
-            out.append((Trip(tid, line, stops, live=False), base + start_s))
+            headsign = row[5] if len(row) > 5 else ""
+            out.append((Trip(tid, line, stops, live=False, headsign=headsign), base + start_s))
     return out
 
 
@@ -201,7 +206,7 @@ def _overlay(trip: Trip, live: LiveTrip) -> Trip:
         else:
             arr, dep = s.arrive + delay, s.depart + delay
         stops.append(Stop(s.code, arr, dep if dep is not None else arr))
-    return Trip(trip.id, trip.line, tuple(stops), live=True)
+    return Trip(trip.id, trip.line, tuple(stops), live=True, headsign=trip.headsign)
 
 
 def _live_only(live: LiveTrip) -> Trip:
