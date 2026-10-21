@@ -125,3 +125,9 @@ def test_commute_is_optional(tmp_path):
 def test_commute_validation(tmp_path, body, msg):
     with pytest.raises(ConfigError, match=msg):
         load_config(write(tmp_path, f"[commute]\n{body}\n"), environ={})
+
+
+def test_commute_lines(tmp_path):
+    assert load_config(REPO / "config.toml", environ={}).commute.lines == ("OR", "SV", "RD")
+    with pytest.raises(ConfigError, match="unknown line"):
+        load_config(write(tmp_path, '[commute]\nlines = ["RED"]\n'), environ={})

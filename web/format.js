@@ -68,3 +68,13 @@ export function waitClass(minutes) {
 // The commute panel goes away if the backend hasn't answered for this long:
 // its rows are "trains from now on", and old ones would list trains long gone.
 export const COMMUTE_EXPIRE_MS = 120000;
+
+// The board's alerts (Orange/Silver) plus the commute panel's (which adds Red),
+// each incident once.
+export function mergeAlerts(boardAlerts, commuteAlerts) {
+  const seen = new Set(), out = [];
+  for (const a of [...(boardAlerts || []), ...(commuteAlerts || [])]) {
+    if (!seen.has(a.id)) { seen.add(a.id); out.push(a); }
+  }
+  return out;
+}

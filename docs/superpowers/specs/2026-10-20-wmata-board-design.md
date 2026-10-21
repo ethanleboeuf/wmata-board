@@ -230,6 +230,9 @@ in chat (no separate spec/plan):
   wall_platform, am: {shuttles, rows}, pm: {hospital, station, station_name}}`.
   `?mode=am|pm&at=H:MM` (on the pages: `?commute=am&at=7:30`) previews a
   panel at other times.
+- **Alerts**: while a panel is up, alerts for `[commute].lines` (OR, SV and
+  RD -- the board alone shows only OR/SV) come with `/api/commute` and join
+  the wall banner / phone list, each incident once.
 - Config: `[commute]` in `config.toml`; `[polling].trips`.
 - Observation from the timetable: Silver trains connect to Red at Metro
   Center in ~2 min, Orange in ~6.

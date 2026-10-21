@@ -149,12 +149,12 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         if at:
             h, m = (int(x) for x in at.split(":"))
             now = datetime.fromtimestamp(wall_now, tz).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
-        if not at and (mode or commute_mode(cfg, datetime.fromtimestamp(now, tz))):
-            await want("trips")
+        if mode or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
+            await want(*(("incidents",) if at else ("trips", "incidents")))
         sched = feeds.get("schedule")
         body = build_commute(cfg, schedule=sched.state if sched else FeedState(),
                              updates=FeedState() if at else feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
-                             wall_now=wall_now, mode=mode)
+                             wall_now=wall_now, mode=mode, incidents=feeds["incidents"].state)
         return JSONResponse(body, headers=NO_STORE)
 
     @app.get("/api/network")

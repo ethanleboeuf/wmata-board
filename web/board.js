@@ -1,5 +1,5 @@
 // Wall board: polls /api/board, renders arrivals, ticks the clock and pill.
-import { formatClock, pillState, alertIndex, arrivalsExpired } from "./format.js";
+import { formatClock, pillState, alertIndex, arrivalsExpired, mergeAlerts } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute } from "./commute.js";
@@ -57,7 +57,7 @@ function renderArrivals(force = false) {
   $("arrivals").classList.toggle("with-commute", am);
   $("arrivals").innerHTML = arrivalsPanelHtml(b, expired) + (am ? commuteAmHtml(commute) : "");
 }
-startCommute(c => { commute = c; renderArrivals(true); });
+startCommute(c => { commute = c; renderArrivals(true); updateAlerts(); });
 
 function tick() {
   const now = Date.now();
@@ -71,8 +71,10 @@ function tick() {
   renderAlert();
 }
 
+// While the commute panel is up its alerts (Red too) join the board's.
 let alerts = [], shownKey = null;
-hooks.onBoard.push(b => { alerts = b.alerts || []; renderAlert(); });
+function updateAlerts() { alerts = mergeAlerts(board?.alerts, commute?.alerts); renderAlert(); }
+hooks.onBoard.push(updateAlerts);
 
 // Several alerts rotate every 10 s; none -> no banner and the panels below
 // reclaim the space (the map panel re-fits itself via its ResizeObserver).

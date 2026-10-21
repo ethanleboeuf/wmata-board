@@ -21,11 +21,13 @@ from datetime import datetime, time as dtime
 from zoneinfo import ZoneInfo
 
 from .config import CommuteConfig
+from .incidents import alerts_for
 from .state import FeedState
 from .trips import Trip, TripUpdates, merge_trips, scheduled_trips
 
 AM, PM = "am", "pm"
 LIVE_STALE_AFTER_S = 120.0
+INCIDENTS_EXPIRE_AFTER_S = 900.0   # as on the board: an incident feed this old is dropped
 EARLIER_SLOTS = 2          # morning rows start two shuttles before the first target
 NOTICE_UNAVAILABLE = "Commute times unavailable"
 
@@ -173,8 +175,20 @@ def live_updates(state: FeedState, now_mono: float, wall_now: float) -> TripUpda
     return upd
 
 
+def commute_alerts(cfg: CommuteConfig, incidents: FeedState | None, now_mono: float) -> list[dict]:
+    """Alerts on any line of the trip -- Red too, which the Court House board
+    doesn't show. The pages merge these with the board's by id."""
+    if incidents is None or incidents.value is None:
+        return []
+    age = incidents.age(now_mono)
+    if age is not None and age > INCIDENTS_EXPIRE_AFTER_S:
+        return []
+    return [a.as_json() for a in alerts_for(incidents.value, cfg.lines)]
+
+
 def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState, tz: ZoneInfo,
-                  now: float, now_mono: float, wall_now: float, mode: str | None = None) -> dict:
+                  now: float, now_mono: float, wall_now: float, mode: str | None = None,
+                  incidents: FeedState | None = None) -> dict:
     """`now` is the planning time (epoch); `wall_now` the real time, which differs
     only when a debug `at=` is given. `mode` overrides the time-of-day window."""
     now_local = datetime.fromtimestamp(now, tz)
@@ -183,6 +197,7 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
             "live": False, "notice": None}
     if mode is None:
         return body
+    body["alerts"] = commute_alerts(cfg, incidents, now_mono)
     live = live_updates(updates, now_mono, wall_now)
     sched = scheduled_trips(schedule.value, now_local.date(), tz) if schedule.value else []
     if not sched and live is None:

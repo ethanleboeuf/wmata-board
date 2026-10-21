@@ -48,3 +48,11 @@ test("evening from the station", () => {
   assert.match(html, /<span class="ct">5:08<\/span><span class="cw w-short">2.*5:36.*sched/);
   assert.doesNotMatch(html, /5:06/);
 });
+
+test("commute alerts join the board's, each once", async () => {
+  const { mergeAlerts } = await import("../../web/format.js");
+  const a = id => ({ id, lines: ["OR"], text: id, updated: "" });
+  assert.deepEqual(mergeAlerts([a("1"), a("2")], [a("2"), a("3")]).map(x => x.id), ["1", "2", "3"]);
+  assert.deepEqual(mergeAlerts([a("1")], undefined).map(x => x.id), ["1"]);
+  assert.deepEqual(mergeAlerts(undefined, null), []);
+});

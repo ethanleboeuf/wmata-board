@@ -93,6 +93,7 @@ class CommuteConfig:
     shuttle_walk: float = 3.0
     rows: int = 5
     wall_platform: str = "2"               # the wall platform the panel replaces
+    lines: tuple[str, ...] = ("OR", "SV", "RD")   # alerts for these show with the panel
 
     @property
     def stations(self) -> tuple[str, ...]:
@@ -259,6 +260,13 @@ def _commute(t: Mapping[str, Any]) -> CommuteConfig | None:
     rows = t.get("rows", d.rows)
     if isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= 8:
         raise ConfigError(f"[commute].rows must be an integer 1-8, got {rows!r}")
+    lines = t.get("lines", list(d.lines))
+    if not isinstance(lines, list) or not lines:
+        raise ConfigError("[commute].lines must be a non-empty list of line codes")
+    lines = tuple(str(x).strip().upper() for x in lines)
+    bad = [x for x in lines if x not in LINE_CODES]
+    if bad:
+        raise ConfigError(f"[commute].lines: unknown line(s) {', '.join(bad)}")
     shuttles = t.get("shuttles", [])
     if not isinstance(shuttles, list):
         raise ConfigError("[commute].shuttles must be a list of times")
@@ -272,7 +280,7 @@ def _commute(t: Mapping[str, Any]) -> CommuteConfig | None:
         evening=_window(t["evening"], "[commute].evening") if "evening" in t else d.evening,
         shuttles=tuple(sorted(_hhmm(x, "[commute].shuttles") for x in shuttles)) if "shuttles" in t else d.shuttles,
         shuttle_every=every, rows=rows,
-        wall_platform=str(t.get("wall_platform", d.wall_platform)),
+        wall_platform=str(t.get("wall_platform", d.wall_platform)), lines=lines,
         **minutes,
     )
 

@@ -207,3 +207,20 @@ def test_evening_payload_has_both_starts():
 def test_mode_override_and_nothing_to_plan_with():
     body = build(at("12:00"), mode=AM)
     assert body["mode"] == AM and body["notice"] == NOTICE_UNAVAILABLE and "am" not in body
+
+
+# ---- alerts -----------------------------------------------------------------------
+
+def test_commute_alerts_cover_red_and_expire():
+    from wmata_board.commute import commute_alerts
+    from wmata_board.incidents import Alert
+
+    alerts = [Alert("1", ("RD",), "Red: single tracking", "t"), Alert("2", ("OR", "SV"), "OR/SV delays", "t"),
+              Alert("3", ("GR", "YL"), "Green/Yellow", "t")]
+    fresh = FeedState(value=alerts, fetched_at=90.0)
+    assert [a["id"] for a in commute_alerts(CFG, fresh, 100.0)] == ["1", "2"]
+    assert commute_alerts(CFG, FeedState(value=alerts, fetched_at=0.0), 1000.0) == []
+    assert commute_alerts(CFG, FeedState(), 100.0) == []
+    body = build_commute(CFG, schedule=FeedState(value=schedule_of(MORNING)), updates=FeedState(), tz=ET,
+                         now=at("7:30"), now_mono=100.0, wall_now=at("7:30"), incidents=fresh)
+    assert [a["id"] for a in body["alerts"]] == ["1", "2"]

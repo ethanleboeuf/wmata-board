@@ -1,6 +1,6 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them).
-import { formatClock, pillState, arrivalsExpired } from "./format.js";
+import { formatClock, pillState, arrivalsExpired, mergeAlerts } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute } from "./commute.js";
@@ -21,7 +21,7 @@ async function poll() {
     else if (board.version !== version) { location.reload(); return; }
     $("station").textContent = board.station.name;
     renderArrivals(true);
-    $("alerts").innerHTML = board.alerts.map(a => `<div class="alert">${alertHtml(a)}</div>`).join("");
+    renderAlerts();
   } catch (err) {
     console.warn("board poll failed", err);
   } finally {
@@ -54,7 +54,13 @@ $("commute").addEventListener("click", ev => {
   try { localStorage.setItem("commuteFrom", origin); } catch { /* not remembered, still switched */ }
   renderCommute();
 });
-const commutePoller = startCommute(c => { commute = c; renderCommute(); });
+const commutePoller = startCommute(c => { commute = c; renderCommute(); renderAlerts(); });
+
+// The board's alerts, plus (while the commute card is up) Red line ones.
+function renderAlerts() {
+  $("alerts").innerHTML = mergeAlerts(board?.alerts, commute?.alerts)
+    .map(a => `<div class="alert">${alertHtml(a)}</div>`).join("");
+}
 
 // Coming back from the background: don't show a false red "Board offline" while
 // waiting out the rest of the poll interval.
