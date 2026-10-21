@@ -165,5 +165,9 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     async def index():
         return FileResponse(WEB_DIR / "index.html", headers=NO_STORE)
 
+    @app.get("/phone")
+    async def phone():
+        return FileResponse(WEB_DIR / "phone.html", headers=NO_STORE)
+
     app.mount("/static", _NoStoreStaticFiles(directory=WEB_DIR), name="static")
     return app

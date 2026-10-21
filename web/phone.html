@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Court House</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="/static/vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="/static/board.css">
+  <link rel="stylesheet" href="/static/phone.css">
+</head>
+<body class="phone">
+  <div id="map" class="phonemap"></div>
+  <button id="recenter" class="recenter" aria-label="Recenter map">◎</button>
+  <section id="sheet" class="sheet">
+    <div class="handle" id="handle"><span></span></div>
+    <header class="shdr">
+      <span id="station" class="stn">Court House</span>
+      <span class="right"><span id="pill" class="pill" hidden></span><span id="clock" class="clk"></span></span>
+    </header>
+    <div id="arrivals" class="arr"></div>
+    <div id="alerts" class="palerts"></div>
+  </section>
+  <script src="/static/vendor/maplibre-gl.js"></script>
+  <script src="/static/vendor/pmtiles.js"></script>
+  <script type="module" src="/static/phone.js"></script>
+</body>
+</html>

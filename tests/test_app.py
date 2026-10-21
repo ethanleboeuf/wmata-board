@@ -172,3 +172,9 @@ def test_network_loading(app):
     with TestClient(app) as c:
         r = c.get("/api/network")
     assert r.status_code == 503
+
+
+def test_phone_served(app):
+    with TestClient(app) as c:
+        r = c.get("/phone")
+    assert r.status_code == 200 and 'id="sheet"' in r.text

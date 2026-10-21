@@ -1,0 +1,32 @@
+body.phone { background: #0d1117; color: #f2f4f7; font-family: Inter, Helvetica, Arial, sans-serif;
+             position: fixed; inset: 0; overflow: hidden; touch-action: none; }
+body.phone * { box-sizing: border-box; }
+.phonemap { position: absolute; inset: 0; background: #0f151d; }
+.recenter { position: absolute; right: 14px; top: calc(14px + env(safe-area-inset-top)); width: 44px; height: 44px;
+            border-radius: 50%; border: 1px solid #2a313c; background: rgba(13,17,23,.9); color: #e6ebf1;
+            font-size: 22px; z-index: 3; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 85vh; z-index: 4; background: #0d1117;
+         border-top: 1px solid #2a313c; border-radius: 16px 16px 0 0; padding: 0 16px env(safe-area-inset-bottom);
+         transform: translateY(calc(85vh - 38vh)); transition: transform .25s ease; overflow-y: auto;
+         touch-action: pan-y; }
+.sheet.dragging { transition: none; }
+.handle { display: flex; justify-content: center; padding: 10px 0 6px; touch-action: none; cursor: grab; }
+.handle span { width: 40px; height: 5px; border-radius: 3px; background: #3b4a5e; }
+.shdr { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px;
+        border-bottom: 1px solid #2a313c; }
+.phone .stn { font-size: 24px; }
+.phone .clk { font-size: 18px; }
+.phone .pill { font-size: 12px; padding: 3px 9px; }
+.phone .arr { padding: 0; }
+.phone .plat h2 { font-size: 12px; letter-spacing: 2px; margin: 14px 0 2px; }
+.phone .row { grid-template-columns: 46px 1fr 74px; height: 56px; }
+.phone .chip { width: 34px; height: 34px; font-size: 14px; }
+.phone .dest { font-size: 20px; }
+.phone .cars { font-size: 12px; }
+.phone .min { font-size: 26px; }
+.phone .min small { font-size: 12px; }
+.phone .notice { margin-top: 24px; font-size: 18px; }
+.palerts .alert { margin-top: 10px; padding: 10px 12px; border-radius: 10px; gap: 8px; flex-wrap: wrap; }
+.palerts .tag { font-size: 11px; padding: 3px 7px; }
+.palerts .chip.sm { width: 22px; height: 22px; font-size: 10px; }
+.palerts .atext { font-size: 14px; -webkit-line-clamp: unset; display: block; flex-basis: 100%; }
