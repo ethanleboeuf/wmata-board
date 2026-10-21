@@ -138,7 +138,9 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     @app.get("/api/commute")
     async def commute(mode: str | None = Query(None, pattern=f"^({AM}|{PM})$"),
                       at: str | None = Query(None, pattern=r"^([01]?\d|2[0-3]):[0-5]\d$")):
-        """`mode` and `at` (H:MM today) are for previewing a panel off-hours."""
+        """`mode` and `at` (H:MM today) are for previewing a panel off-hours. A
+        preview at another time plans on the timetable alone: the live feed
+        describes now, and would drop that time's trains as not running."""
         cfg = config.commute
         if cfg is None:
             return JSONResponse({"mode": None}, headers=NO_STORE)
@@ -147,11 +149,11 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         if at:
             h, m = (int(x) for x in at.split(":"))
             now = datetime.fromtimestamp(wall_now, tz).replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
-        if mode or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
+        if not at and (mode or commute_mode(cfg, datetime.fromtimestamp(now, tz))):
             await want("trips")
         sched = feeds.get("schedule")
         body = build_commute(cfg, schedule=sched.state if sched else FeedState(),
-                             updates=feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
+                             updates=FeedState() if at else feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
                              wall_now=wall_now, mode=mode)
         return JSONResponse(body, headers=NO_STORE)
 

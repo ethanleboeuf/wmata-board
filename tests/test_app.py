@@ -244,6 +244,12 @@ def test_commute_morning_preview_from_the_timetable(commute_app):
     assert len(rows) == 5
     assert all(r["line"] in ("OR", "SV") for r in rows)
     assert any(r["target"] for r in rows)
+    assert not commute_app.state.feeds["trips"].wanted()   # a preview at another time ignores live data
+
+
+def test_commute_now_marks_live_trips_wanted(commute_app):
+    with TestClient(commute_app) as c:
+        assert c.get("/api/commute?mode=am").json()["mode"] == "am"
     assert commute_app.state.feeds["trips"].wanted()
 
 
