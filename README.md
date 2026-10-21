@@ -32,9 +32,11 @@ cd wmata-board && python3 -m venv .venv && .venv/bin/pip install -e .
 echo 'WMATA_API_KEY=...' > ~/wmata-board.env && chmod 600 ~/wmata-board.env
 mkdir -p ~/.config/systemd/user && cp deploy/wmata-board.service ~/.config/systemd/user/
 systemctl --user daemon-reload && systemctl --user enable --now wmata-board
+loginctl enable-linger $USER     # lets the user unit start at boot without a login
 ```
 
-- Basemap: run `tools/build_basemap.sh` (added with the live map, milestone 5).
+- Basemap: run `tools/build_basemap.sh` (added with the live map, milestone 5). After
+  rebuilding it, reload the kiosk page / phone: browsers may cache old byte ranges for a day.
 - Phone page: expose it with `tailscale serve` on :8446 to `http://127.0.0.1:8766`
   (e.g. `tailscale serve --bg --https=8446 http://127.0.0.1:8766`).
 - Wall: add a `metro` target (`http://localhost:8766/`) to `~/kiosk-selector/targets.py`
@@ -51,7 +53,9 @@ Open pages reload themselves when they see the new version.
 
 ## Troubleshooting
 
-- Logs: `journalctl --user -u wmata-board -f`
+- Logs: `journalctl _SYSTEMD_USER_UNIT=wmata-board.service -f`
+  (`journalctl --user -u wmata-board` says "No journal files" on this Pi: the user journal
+  isn't persisted, so entries land in the system journal, readable via the `adm` group.)
 - Health: `curl -s localhost:8766/healthz`
 - Status pill: amber = WMATA data is old; red = the page can't reach the service.
 - "WMATA rejected the API key": check `~/wmata-board.env`.

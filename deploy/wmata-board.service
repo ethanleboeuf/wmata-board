@@ -8,9 +8,12 @@ Wants=network-online.target
 Type=exec
 WorkingDirectory=%h/wmata-board
 # WMATA_API_KEY lives outside the repo (chmod 600), like ~/map-journal.env.
-EnvironmentFile=%h/wmata-board.env
+# The leading '-' makes the file optional: no key -> the board says so, not a start failure.
+EnvironmentFile=-%h/wmata-board.env
 ExecStart=%h/wmata-board/.venv/bin/python -m wmata_board --config %h/wmata-board/config.toml
 Restart=always
+# Exit 2 = config error; restarting can't fix it.
+RestartPreventExitStatus=2
 RestartSec=5
 TimeoutStopSec=10
 StandardOutput=journal
