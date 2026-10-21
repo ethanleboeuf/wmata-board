@@ -1,0 +1,35 @@
+# wmata-board configuration. Edit and restart:
+#   systemctl --user restart wmata-board
+# The API key is NOT here: it comes from WMATA_API_KEY in the environment
+# (~/wmata-board.env on the Pi) or a gitignored .env next to this file.
+
+[board]
+stations = ["K01"]
+lines = ["OR", "SV"]          # omit to use every line the station serves
+rows_per_direction = 3
+timezone = "America/New_York"
+
+[stations.K01.platforms]      # WMATA "Group" -> label; K01: 1 = eastbound, 2 = westbound
+1 = "To Washington · New Carrollton"
+2 = "To Vienna · Ashburn"
+
+[polling]                      # seconds
+arrivals = 20
+incidents = 60
+positions = 5
+idle_after = 90                # a feed is polled only this long after someone last asked
+
+[map]
+bbox = [-77.122, 38.844, -76.978, 38.966]   # west, south, east, north
+labels = ["K04", "K02", "C05", "C04", "C01", "D03", "B03", "A03", "C07", "F05", "B05"]
+places = [["GEORGETOWN", 38.9085, -77.0665], ["THE MALL", 38.8873, -77.0405], ["ARLINGTON", 38.8705, -77.106], ["WASHINGTON", 38.9335, -77.096]]
+
+[[map.landmarks]]
+name = "Children's National"
+lat = 38.92711
+lon = -77.01417
+style = "hospital"
+
+[server]
+host = "127.0.0.1"
+port = 8766
