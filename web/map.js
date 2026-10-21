@@ -1,7 +1,7 @@
 // Shared map: MapLibre draws only the Board-navy basemap; an SVG overlay on
 // top draws lanes, stations, labels, landmarks and gliding trains, re-projected
 // with map.project() on every move so the wall and the phone share this file.
-import { LINE_COLORS, LINE_LETTER, escapeHtml } from "./format.js";
+import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
 
@@ -93,13 +93,21 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     `<radialGradient id="hosp"><stop offset="0" stop-color="#ff8a9b" stop-opacity=".55"/>` +
     `<stop offset="1" stop-color="#ff8a9b" stop-opacity="0"/></radialGradient></defs>` +
     `<g class="static"></g><g class="trains"></g>` +
-    `<text class="live" x="24" y="44"><tspan fill="#3ddc84">●</tspan> LIVE · <tspan class="count">0</tspan> TRAINS</text>`;
+    `<text class="live" x="24" y="44"><tspan class="dot" fill="#3ddc84">●</tspan> <tspan class="lbl"></tspan></text>`;
   el.appendChild(svg);
   const pulse = document.createElement("div");
   pulse.className = "pulse";
   el.appendChild(pulse);
   const gStatic = svg.querySelector(".static"), gTrains = svg.querySelector(".trains");
-  const countEl = svg.querySelector(".count");
+  const dotEl = svg.querySelector(".dot"), lblEl = svg.querySelector(".lbl");
+  let shownLabel = "";
+  function setLabel(count) {
+    const text = liveLabel({ stale, count });
+    if (text === shownLabel) return;
+    shownLabel = text;
+    lblEl.textContent = text;
+    dotEl.setAttribute("fill", stale ? "#ffb020" : "#3ddc84");
+  }
 
   const project = (lon, lat) => { const p = map.project([lon, lat]); return [p.x, p.y]; };
   const pl = pts => pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
@@ -228,7 +236,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       seen.add(v.id);
     }
     for (const [id, e] of els) if (!seen.has(id)) { e.g.remove(); els.delete(id); }
-    countEl.textContent = stale ? "0" : String(visible);
+    setLabel(visible);
   }
 
   function refit() {

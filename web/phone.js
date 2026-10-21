@@ -1,14 +1,16 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them).
-import { formatClock, pillState } from "./format.js";
-import { arrivalsHtml, alertHtml } from "./render.js";
+import { formatClock, pillState, arrivalsExpired } from "./format.js";
+import { arrivalsPanelHtml, alertHtml } from "./render.js";
 import { createMap } from "./map.js";
 
 const $ = id => document.getElementById(id);
 const startMs = Date.now();
 let board = null, lastOkMs = null, version = null;
 
+let pollTimer = null;
 async function poll() {
+  clearTimeout(pollTimer);   // tolerate an extra immediate call without a second chain
   try {
     const r = await fetch("/api/board", { cache: "no-store", signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -17,14 +19,28 @@ async function poll() {
     if (version === null) version = board.version;
     else if (board.version !== version) { location.reload(); return; }
     $("station").textContent = board.station.name;
-    $("arrivals").innerHTML = arrivalsHtml(board);
+    renderArrivals(true);
     $("alerts").innerHTML = board.alerts.map(a => `<div class="alert">${alertHtml(a)}</div>`).join("");
   } catch (err) {
     console.warn("board poll failed", err);
   } finally {
-    setTimeout(poll, 5000);
+    pollTimer = setTimeout(poll, 5000);
   }
 }
+
+// Re-rendered on a new board, or when the local 10-minute expiry flips.
+let shownExpired = null;
+function renderArrivals(force = false) {
+  if (!board) return;
+  const expired = arrivalsExpired({ nowMs: Date.now(), lastOkMs, arrivalsAgeS: board.freshness?.arrivals?.age_s ?? null });
+  if (!force && expired === shownExpired) return;
+  shownExpired = expired;
+  $("arrivals").innerHTML = arrivalsPanelHtml(board, expired);
+}
+
+// Coming back from the background: don't show a false red "Board offline" while
+// waiting out the rest of the poll interval.
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") poll(); });
 
 function tick() {
   const now = Date.now();
@@ -34,6 +50,7 @@ function tick() {
   pill.hidden = p.kind === "hidden";
   pill.className = `pill ${p.kind}`;
   pill.textContent = p.text;
+  renderArrivals();
 }
 
 // Bottom sheet: drag the handle or header between "peek" (38% visible) and "open"
@@ -74,14 +91,23 @@ const fitPadding = () => ({
   bottom: Math.min(sheetH() - offset, innerHeight * 0.6) + 16,
 });
 
-createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
-  .then(m => {
-    $("recenter").addEventListener("click", () => m.recenter());
-    // Allow zooming out to the whole system, but not off into the void.
-    m.map.setMaxBounds([[-77.75, 38.6], [-76.6, 39.3]]);
-    m.map.setMinZoom(8.5);
-  })
-  .catch(err => console.error("map failed", err));
+let recenter = null;
+$("recenter").addEventListener("click", () => recenter?.());
+function startMap() {
+  createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
+    .then(m => {
+      recenter = () => m.recenter();
+      // Allow zooming out to the whole system, but not off into the void.
+      m.map.setMaxBounds([[-77.75, 38.6], [-76.6, 39.3]]);
+      m.map.setMinZoom(8.5);
+    })
+    .catch(err => {
+      console.error("map failed; retrying in 30 s", err);
+      $("map").replaceChildren();
+      setTimeout(startMap, 30000);
+    });
+}
+startMap();
 
 setInterval(tick, 1000);
 tick();

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { minuteParts, pillState, formatClock, alertIndex, escapeHtml, LINE_COLORS } from "../../web/format.js";
+import { minuteParts, pillState, formatClock, alertIndex, escapeHtml, arrivalsExpired, liveLabel, LINE_COLORS } from "../../web/format.js";
 
 test("minuteParts", () => {
   assert.deepEqual(minuteParts("BRD"), { big: "BRD", unit: "", now: true });
@@ -49,4 +49,18 @@ test("escapeHtml", () => {
 
 test("line colors cover all six lines", () => {
   assert.deepEqual(Object.keys(LINE_COLORS).sort(), ["BL", "GR", "OR", "RD", "SV", "YL"]);
+});
+
+test("arrivalsExpired after 10 minutes, counting time since the last response", () => {
+  assert.equal(arrivalsExpired({ nowMs: 0, lastOkMs: 0, arrivalsAgeS: 600 }), false);
+  assert.equal(arrivalsExpired({ nowMs: 0, lastOkMs: 0, arrivalsAgeS: 601 }), true);
+  assert.equal(arrivalsExpired({ nowMs: 300_000, lastOkMs: 0, arrivalsAgeS: 295 }), false);
+  assert.equal(arrivalsExpired({ nowMs: 306_000, lastOkMs: 0, arrivalsAgeS: 295 }), true);
+  assert.equal(arrivalsExpired({ nowMs: 9e9, lastOkMs: null, arrivalsAgeS: null }), false);
+  assert.equal(arrivalsExpired({ nowMs: 9e9, lastOkMs: 0, arrivalsAgeS: null }), false);
+});
+
+test("liveLabel", () => {
+  assert.equal(liveLabel({ stale: false, count: 12 }), "LIVE · 12 TRAINS");
+  assert.equal(liveLabel({ stale: true, count: 12 }), "POSITIONS STALE");
 });

@@ -1,6 +1,6 @@
 // Wall board: polls /api/board, renders arrivals, ticks the clock and pill.
-import { formatClock, pillState, alertIndex } from "./format.js";
-import { arrivalsHtml, alertHtml } from "./render.js";
+import { formatClock, pillState, alertIndex, arrivalsExpired } from "./format.js";
+import { arrivalsPanelHtml, alertHtml } from "./render.js";
 import { createMap } from "./map.js";
 
 const POLL_MS = 5000;
@@ -18,7 +18,9 @@ const startMs = Date.now();
 let board = null, lastOkMs = null, version = null;
 export const hooks = { onBoard: [] };   // Task 9 subscribes the alert banner here
 
+let pollTimer = null;
 async function poll() {
+  clearTimeout(pollTimer);   // tolerate an extra immediate call without a second chain
   try {
     const r = await fetch("/api/board", { cache: "no-store", signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -30,15 +32,25 @@ async function poll() {
   } catch (err) {
     console.warn("board poll failed", err);   // the pill turns red after OFFLINE_AFTER_MS
   } finally {
-    setTimeout(poll, POLL_MS);
+    pollTimer = setTimeout(poll, POLL_MS);
   }
 }
 
 function render() {
   $("station").textContent = board.station.name;
   document.title = board.station.name;
-  $("arrivals").innerHTML = arrivalsHtml(board);
+  renderArrivals(true);
   hooks.onBoard.forEach(fn => fn(board));
+}
+
+// Re-rendered on a new board, or when the local 10-minute expiry flips.
+let shownExpired = null;
+function renderArrivals(force = false) {
+  if (!board) return;
+  const expired = arrivalsExpired({ nowMs: Date.now(), lastOkMs, arrivalsAgeS: board.freshness?.arrivals?.age_s ?? null });
+  if (!force && expired === shownExpired) return;
+  shownExpired = expired;
+  $("arrivals").innerHTML = arrivalsPanelHtml(board, expired);
 }
 
 function tick() {
@@ -49,6 +61,7 @@ function tick() {
   pill.hidden = p.kind === "hidden";
   pill.className = `pill ${p.kind}`;
   pill.textContent = p.text;
+  renderArrivals();
   renderAlert();
 }
 
@@ -69,4 +82,11 @@ function renderAlert() {
 setInterval(tick, 1000);
 tick();
 poll();
-createMap($("map"), { interactive: false, fit: "cover" }).catch(err => console.error("map failed", err));
+function startMap() {
+  createMap($("map"), { interactive: false, fit: "cover" }).catch(err => {
+    console.error("map failed; retrying in 30 s", err);
+    $("map").replaceChildren();
+    setTimeout(startMap, 30000);
+  });
+}
+startMap();

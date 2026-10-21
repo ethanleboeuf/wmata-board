@@ -53,3 +53,12 @@ test("a non-numeric cars value is escaped", () => {
   assert.doesNotMatch(html, /<img/);
   assert.match(html, /&lt;img src=x&gt; car/);
 });
+
+test("arrivalsPanelHtml shows the unavailable notice when expired", async () => {
+  const { arrivalsPanelHtml } = await import("../../web/render.js");
+  const board = { notice: null, platforms: [{ label: "To X", trains: [{ line: "OR", destination: "X", display: "3", cars: 8 }] }] };
+  assert.match(arrivalsPanelHtml(board, false), /To X/);
+  const html = arrivalsPanelHtml(board, true);
+  assert.match(html, /Live arrivals unavailable/);
+  assert.doesNotMatch(html, /To X/);
+});

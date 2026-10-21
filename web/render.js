@@ -1,6 +1,6 @@
 // HTML builders shared by the wall and the phone. Strings only, no DOM, so
 // they run under node --test.
-import { LINE_COLORS, minuteParts, escapeHtml } from "./format.js";
+import { LINE_COLORS, NOTICE_UNAVAILABLE, minuteParts, escapeHtml } from "./format.js";
 
 export function chip(line, cls = "chip") {
   const [bg, fg] = LINE_COLORS[line] || ["#3b4a5e", "#fff"];
@@ -22,6 +22,11 @@ export function arrivalsHtml(board) {
     `<section class="plat"><h2>${escapeHtml(p.label)}</h2>` +
     (p.trains.length ? p.trains.map(rowHtml).join("") : `<div class="row empty">No trains predicted</div>`) +
     `</section>`).join("");
+}
+
+// Arrivals panel; `expired` swaps the rows for the "unavailable" notice (see arrivalsExpired).
+export function arrivalsPanelHtml(board, expired) {
+  return arrivalsHtml(expired ? { ...board, notice: NOTICE_UNAVAILABLE } : board);
 }
 
 export function alertHtml(alert) {
