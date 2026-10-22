@@ -75,12 +75,13 @@ def _is_passenger(raw: Mapping[str, Any]) -> bool:
     return not any("ssenger" in _text(raw.get(k)).lower() for k in ("Destination", "DestinationName"))
 
 
-def parse_predictions(payload: Any, stations: Iterable[str],
+def parse_predictions(payload: Any, stations: Iterable[str] | None,
                       lines: Iterable[str] | None = None) -> list[Train]:
+    """`stations` None keeps every station (the phone can show any)."""
     trains = payload.get("Trains") if isinstance(payload, Mapping) else None
     if not isinstance(trains, list):
         raise WmataError("parse", "prediction response has no Trains list")
-    wanted_stations = set(stations)
+    wanted_stations = None if stations is None else set(stations)
     wanted_lines = None if lines is None else set(lines)
 
     out = []
@@ -89,7 +90,8 @@ def parse_predictions(payload: Any, stations: Iterable[str],
             continue
         station = _text(raw.get("LocationCode"))
         line = _text(raw.get("Line")).upper()
-        if station not in wanted_stations or (wanted_lines is not None and line not in wanted_lines):
+        if ((wanted_stations is not None and station not in wanted_stations)
+                or (wanted_lines is not None and line not in wanted_lines)):
             continue
         minutes, display = _minutes(raw.get("Min"))
         car = _text(raw.get("Car"))

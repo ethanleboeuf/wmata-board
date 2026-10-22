@@ -282,6 +282,7 @@ def test_phone_page_is_installable(app):
 def trip_app(fixtures):
     """Live trips, positions and timetable from the same recording, with the
     wall clock pinned to it so the live feed counts as fresh."""
+    from datetime import datetime
     from zoneinfo import ZoneInfo
 
     from wmata_board.trips import FixtureSchedule, decode_trip_updates
@@ -294,6 +295,10 @@ def trip_app(fixtures):
     for name in ("schedule", "network", "positions"):
         feeds[name].state.value = asyncio.run(feeds[name]._fetch())
     upd = decode_trip_updates((fixtures / "trip_updates.pb").read_bytes())
+    # FixtureSchedule replays as today; the wall clock here is the recording's day
+    day = datetime.fromtimestamp(upd.feed_timestamp, ZoneInfo(cfg.board.timezone)).strftime("%Y%m%d")
+    sched = feeds["schedule"].state.value
+    sched["services"] = {sid: [day] for sid in sched["services"]}
     feeds["trips"].state.value, feeds["trips"].state.fetched_at = upd, clock.t
     app = create_app(cfg, client, feeds=feeds, version="test", fresh_wait_s=0, start_polling=False,
                      clock=clock, wall_clock=lambda: float(upd.feed_timestamp))
@@ -350,3 +355,16 @@ def test_ride_is_shared_through_positions(fixtures, tmp_path):
         assert c.delete("/api/ride").json() == {"ride": None, "trip": None}
         now[0] = 2100.0
     assert not (tmp_path / "ride.json").exists()
+
+
+def test_board_for_another_station(app, fixtures):
+    from wmata_board.state import FeedState
+
+    net = asyncio.run(FixtureNetwork(fixtures / "network.json").load())
+    app.state.feeds["network"].state = FeedState(value=net, fetched_at=100.0)
+    with TestClient(app) as c:
+        assert c.get("/api/board").json()["station"]["code"] == "K01"
+        b = c.get("/api/board?station=C01").json()
+        assert b["station"] == {"code": "A01", "name": "Metro Center", "home": False}
+        assert c.get("/api/board?station=Z99").status_code == 404
+        assert c.get("/api/board?station=k01").status_code == 422

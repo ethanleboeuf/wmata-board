@@ -177,3 +177,29 @@ export function commuteCardHtml(row, kind, trips, stationName = "Takoma") {
   if (kind === "am") parts.push(step(`Brookland ${row.brookland} → shuttle ${row.shuttle} (+${row.spare})`));
   return parts.join("");
 }
+
+// ---- station picker (phone) ------------------------------------------------
+
+// Stations whose name matches `query` (case-insensitive), alphabetical.
+export function matchStations(stations, query) {
+  const q = query.trim().toLowerCase();
+  return stations.filter(s => !q || s.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// The nearest station to lon/lat (an equirectangular distance is plenty here).
+export function nearestStation(stations, lon, lat) {
+  const k = Math.cos(lat * Math.PI / 180);
+  let best = null, bestD = Infinity;
+  for (const s of stations) {
+    const d = ((s.lon - lon) * k) ** 2 + (s.lat - lat) ** 2;
+    if (d < bestD) { best = s; bestD = d; }
+  }
+  return best;
+}
+
+export function stationRowsHtml(stations, current) {
+  if (!stations.length) return `<div class="tnone">No matching station</div>`;
+  return stations.map(s => `<button class="prow${s.codes.includes(current) ? " on" : ""}" data-code="${escapeHtml(s.codes[0])}">` +
+    `${escapeHtml(s.name)}</button>`).join("");
+}

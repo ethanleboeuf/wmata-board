@@ -76,3 +76,19 @@ body.phone * { box-sizing: border-box; }
 .tride { display: block; margin: 10px auto 2px; min-height: 36px; padding: 6px 16px; border-radius: 18px;
          border: 1px solid #2a313c; background: transparent; color: #aab3c0; font: 700 13px Inter, Helvetica, Arial, sans-serif; }
 .tride.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }
+/* Station picker: tap the station name in the sheet header. */
+.phone .stn { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-size: 24px; font-weight: 800;
+              text-align: left; cursor: pointer; }
+.stn .caret { margin-left: 6px; font-size: 14px; color: #8b95a3; vertical-align: 3px; }
+.picker { max-height: 72vh; display: flex; flex-direction: column; }
+.picker .pbtns { display: flex; gap: 8px; margin: 2px 40px 10px 0; }
+.picker .ctab { font-size: 13px; padding: 6px 14px; border-width: 1px; min-height: 36px; }
+.picker input { width: 100%; min-height: 42px; padding: 8px 12px; border-radius: 10px; border: 1px solid #2a313c;
+                background: #151b23; color: #f2f4f7; font: 600 16px Inter, Helvetica, Arial, sans-serif; }
+.picker .tnone { margin: 8px 0 0; }
+.picker .tnone:empty { display: none; }
+.plist { overflow-y: auto; margin-top: 6px; }
+.prow { display: block; width: 100%; min-height: 44px; padding: 10px 4px; text-align: left; background: none; border: 0;
+        border-bottom: 1px solid #1c222b; color: #e6ebf1; font: 600 16px Inter, Helvetica, Arial, sans-serif; }
+.prow.on { color: #f7c3cc; font-weight: 800; }
+.prow:active { background: #151e29; }

@@ -19,12 +19,11 @@ STATION_CADENCE_S = 86400.0   # names, lines and first/last trains change rarely
 
 def build_feeds(config: Config, client, *, network_loader=None, schedule_loader=None,
                 clock: Callable[[], float] = time.monotonic) -> dict[str, Feed]:
-    stations = list(config.board.stations)
     code = config.board.station
     idle = config.polling.idle_after
 
-    async def arrivals():
-        return parse_predictions(await client.predictions(stations), stations)
+    async def arrivals():   # every station in one call: the phone can pick any
+        return parse_predictions(await client.predictions(["All"]), None)
 
     async def incidents():
         return parse_incidents(await client.incidents())

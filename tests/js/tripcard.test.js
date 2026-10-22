@@ -86,3 +86,17 @@ test("easter-egg ride plan: switches at Metro Center, gets off at the end", asyn
   // a map train, or nothing known: one trip for up to 3 h
   assert.deepEqual(ridePlan([{ trip: "x", to: null }], [null], 10), { trips: ["x"], switch_at: null, until: 10 + RIDE_MAX_S });
 });
+
+test("station picker: search, nearest, rows", async () => {
+  const { matchStations, nearestStation, stationRowsHtml } = await import("../../web/render.js");
+  const st = [{ codes: ["K01"], name: "Court House", lon: -77.085, lat: 38.891 },
+              { codes: ["A01", "C01"], name: "Metro Center", lon: -77.028, lat: 38.898 },
+              { codes: ["B05"], name: "Brookland-CUA", lon: -76.994, lat: 38.933 }];
+  assert.deepEqual(matchStations(st, "").map(s => s.name), ["Brookland-CUA", "Court House", "Metro Center"]);
+  assert.deepEqual(matchStations(st, " metro ").map(s => s.name), ["Metro Center"]);
+  assert.equal(nearestStation(st, -77.03, 38.90).name, "Metro Center");
+  const html = stationRowsHtml(st, "C01");
+  assert.match(html, /<button class="prow" data-code="K01">Court House<\/button>/);
+  assert.match(html, /<button class="prow on" data-code="A01">Metro Center<\/button>/);
+  assert.match(stationRowsHtml([], "K01"), /No matching station/);
+});

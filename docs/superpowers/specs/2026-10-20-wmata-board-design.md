@@ -265,6 +265,19 @@ in chat (no separate spec/plan):
   server keeps it in `data/ride.json` and names the trip as `ride` in
   `/api/positions`.
 
+## Phone station picker (added 2026-10-22)
+
+- The arrivals feed polls `GetPrediction/All` (one call, as before; just a
+  bigger payload) so `/api/board?station=CODE` can answer for any station.
+  Home (config `board.station`) is unchanged: its line filter, platform
+  labels and first/last-train notice. Any other station gets every line,
+  "To <destinations>" labels, all platforms of a transfer station (Metro
+  Center = A01 + C01, from the network's station list), alerts for the lines
+  seen there, and "No trains predicted" when empty. Unknown code: 404.
+- Phone: tap the station name for a picker (search, 📍 Nearest via the
+  browser's location, 🏠 Court House); the map flies to the pick. Not
+  remembered: every launch starts at home. The wall never passes `station`.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by

@@ -4,8 +4,9 @@
     .venv/bin/python tools/record_fixtures.py tests/fixtures --station K01 --positions 12
     .venv/bin/python tools/record_fixtures.py tests/fixtures --commute 2026-10-22
 
-Writes predictions_<code>.json, incidents.json (only with --incidents, since
-the sample one is hand-made), station_info_<code>.json, station_times_<code>.json
+Writes predictions_<code>.json, predictions_All.json (what the server polls),
+incidents.json (only with --incidents, since the sample one is hand-made),
+station_info_<code>.json, station_times_<code>.json
 and positions/vp_<ms>.pb snapshots 5 s apart. --commute DATE writes
 trip_updates.pb and schedule.json: the commute stations' timetable for that one
 service day (fixtures mode replays it as "today").
@@ -48,6 +49,7 @@ async def main() -> None:
         print("wrote", out / name)
 
     save(f"predictions_{code}.json", await client.predictions([code]))
+    save("predictions_All.json", await client.predictions(["All"]))
     save(f"station_info_{code}.json", await client.station_info(code))
     save(f"station_times_{code}.json", await client.station_times(code))
     if args.incidents:

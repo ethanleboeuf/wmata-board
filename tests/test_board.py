@@ -8,15 +8,15 @@ from wmata_board.board import (NOTICE_BAD_KEY, NOTICE_LOADING, NOTICE_NO_KEY,
 from wmata_board.state import FeedState
 
 
-def board(cfg=None, arrivals=None, incidents=None, station=None, now=110.0, now_local=NOON):
+def board(cfg=None, arrivals=None, incidents=None, station=None, now=110.0, now_local=NOON, other=None):
     return build_board(config=cfg or config(), arrivals=arrivals or arrivals_state(),
                        incidents=incidents or incidents_state(), station=station or station_state(),
-                       now=now, now_local=now_local, version="v1")
+                       now=now, now_local=now_local, version="v1", other=other)
 
 
 def test_normal_board():
     b = board()
-    assert b["station"] == {"code": "K01", "name": "Court House"}
+    assert b["station"] == {"code": "K01", "name": "Court House", "home": True}
     assert b["timezone"] == "America/New_York"
     assert b["version"] == "v1"
     assert b["notice"] is None
@@ -115,3 +115,21 @@ def test_fresh_value_with_just_failed_api_key_fetch_still_shows_trains():
 def test_alerts_dropped_when_incident_feed_older_than_15_min():
     assert board(incidents=incidents_state(), now=100.0 + 899)["alerts"]
     assert board(incidents=incidents_state(), now=100.0 + 901)["alerts"] == []
+
+
+def test_any_station_with_every_platform_of_a_transfer_station():
+    from wmata_board.board import NOTICE_NO_TRAINS
+    from wmata_board.predictions import parse_predictions
+
+    raw = lambda loc, group, line, dest, m: {"LocationCode": loc, "Group": group, "Line": line, "Car": "8",
+                                             "Destination": dest, "DestinationName": dest, "Min": m}
+    trains = parse_predictions({"Trains": [raw("A01", "1", "RD", "Glenmont", "3"), raw("A01", "2", "RD", "Shady Grv", "5"),
+                                           raw("C01", "1", "BL", "Largo", "ARR"), raw("K01", "1", "OR", "NewCrltn", "2")]},
+                               None)
+    mc = {"codes": ["A01", "C01"], "name": "Metro Center"}
+    b = board(arrivals=state(trains), other=mc)
+    assert b["station"] == {"code": "A01", "name": "Metro Center", "home": False}
+    assert [p["label"] for p in b["platforms"]] == ["To Glenmont", "To Shady Grv", "To Largo"]
+    assert b["service"] is None and b["notice"] is None
+    assert {l for a in b["alerts"] for l in a["lines"]} & {"RD", "BL"}
+    assert board(arrivals=state(trains), other={"codes": ["N06"], "name": "Wiehle"})["notice"] == NOTICE_NO_TRAINS

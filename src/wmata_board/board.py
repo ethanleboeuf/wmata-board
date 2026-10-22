@@ -24,6 +24,7 @@ NOTICE_NO_KEY = "No WMATA API key configured"
 NOTICE_BAD_KEY = "WMATA rejected the API key"
 NOTICE_LOADING = "Loading arrivals…"
 NOTICE_UNAVAILABLE = "Live arrivals unavailable"
+NOTICE_NO_TRAINS = "No trains predicted"
 
 
 def effective_lines(config: Config, station: StationData | None) -> tuple[str, ...] | None:
@@ -60,26 +61,37 @@ def _notice(config: Config, arrivals: FeedState, age: float | None, has_trains: 
 
 
 def build_board(*, config: Config, arrivals: FeedState, incidents: FeedState, station: FeedState,
-                now: float, now_local: datetime, version: str) -> dict:
-    code = config.board.station
-    info: StationData | None = station.value
-    lines = effective_lines(config, info)
+                now: float, now_local: datetime, version: str, other: dict | None = None) -> dict:
+    """`other`: a network station ({"codes", "name"}) to show instead of the
+    home one (the phone's picker). It gets every line, the default platform
+    labels, all of a transfer station's platforms, and no first/last train."""
+    if other is None:
+        codes = (config.board.station,)
+        info: StationData | None = station.value
+        lines = effective_lines(config, info)
+        service = _service(info, now_local)
+        name = info.name if info else codes[0]
+    else:
+        codes, name, lines, service = tuple(other["codes"]), other["name"], None, None
 
-    trains = [t for t in (arrivals.value or []) if t.station == code and (lines is None or t.line in lines)]
-    service = _service(info, now_local)
+    trains = [t for t in (arrivals.value or []) if t.station in codes and (lines is None or t.line in lines)]
     age = arrivals.age(now)
     notice = _notice(config, arrivals, age, bool(trains), service)
     if notice in (NOTICE_NO_KEY, NOTICE_BAD_KEY, NOTICE_UNAVAILABLE, NOTICE_LOADING):
         trains = []
+    elif notice is None and other is not None and not trains:
+        notice = NOTICE_NO_TRAINS
 
-    platforms = platforms_for(trains, code, config.platforms.get(code, {}),
-                              config.board.rows_per_direction)
+    platforms = [p for c in codes for p in platforms_for(trains, c, config.platforms.get(c, {}),
+                                                         config.board.rows_per_direction)]
+    if other is not None:   # alerts for the lines seen here (all of them when none are)
+        lines = tuple(sorted({t.line for t in trains})) or None
     incidents_age = incidents.age(now)
     expired = incidents_age is not None and incidents_age > INCIDENTS_EXPIRE_AFTER_S
     alerts = [] if expired else alerts_for(incidents.value or [], lines)
 
     return {
-        "station": {"code": code, "name": info.name if info else code},
+        "station": {"code": codes[0], "name": name, "home": other is None},
         "timezone": config.board.timezone,
         "generated_at": now_local.isoformat(timespec="seconds"),
         "version": version,

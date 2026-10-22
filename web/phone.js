@@ -1,27 +1,35 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them). Tapping a train
 // on the map or a commute row opens a trip card.
-import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan } from "./format.js";
+import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan, escapeHtml } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteModeHtml, trainCardHtml,
-         commuteCardHtml } from "./render.js";
+         commuteCardHtml, matchStations, nearestStation, stationRowsHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute, tripQuery } from "./commute.js";
 
 const $ = id => document.getElementById(id);
 const startMs = Date.now();
 let board = null, lastOkMs = null, version = null;
+// The station the arrivals are for: null is home (Court House), where every
+// launch starts; else {codes, name} from the picker.
+let away = null;
 
 let pollTimer = null;
 async function poll() {
   clearTimeout(pollTimer);   // tolerate an extra immediate call without a second chain
+  const asked = away;
   try {
-    const r = await fetch("/api/board", { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    const r = await fetch(`/api/board${asked ? `?station=${asked.codes[0]}` : ""}`,
+                          { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (r.status === 404 && asked) { away = null; return; }   // finally{} polls home
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    board = await r.json();
+    const body = await r.json();
+    if (asked !== away) return;   // switched station while this was in flight
+    board = body;
     lastOkMs = Date.now();
     if (version === null) version = board.version;
     else if (board.version !== version) { location.reload(); return; }
-    $("station").textContent = board.station.name;
+    $("station").innerHTML = `${escapeHtml(board.station.name)}<span class="caret">▾</span>`;
     renderArrivals(true);
     renderAlerts();
   } catch (err) {
@@ -172,6 +180,72 @@ function openCommuteRow(i) {
   openCard(next);
 }
 
+// ---- station picker: tap the station name ----
+let stations = null, home = "K01";   // from /api/network (home: the wall's station), loaded on first open
+async function loadStations() {
+  if (!stations) {
+    try {
+      const r = await fetch("/api/network", { signal: AbortSignal.timeout(8000) });
+      if (r.ok) ({ stations, home } = await r.json());
+    } catch { /* retried on the next open */ }
+  }
+  return stations;
+}
+function renderPicker(note = "") {
+  const query = $("psearch")?.value ?? "";
+  const current = board?.station.code;
+  if (!$("psearch")) {
+    $("picker").innerHTML = `<button class="tclose" aria-label="Close">✕</button><h3>Arrivals at</h3>` +
+      `<div class="pbtns"><button class="ctab" data-near>📍 Nearest</button>` +
+      `<button class="ctab" data-home>🏠 Court House</button></div>` +
+      `<input id="psearch" type="search" placeholder="Search stations" autocomplete="off">` +
+      `<div id="pnote" class="tnone"></div><div id="plist" class="plist"></div>`;
+  }
+  $("pnote").textContent = note;
+  $("plist").innerHTML = stations ? stationRowsHtml(matchStations(stations, query), current)
+                                  : `<div class="tnone">Stations unavailable</div>`;
+}
+async function openPicker() {
+  closeCard();
+  $("picker").innerHTML = "";
+  $("picker").hidden = false;
+  renderPicker("Loading…");
+  await loadStations();
+  if (!$("picker").hidden) renderPicker();
+}
+const closePicker = () => { $("picker").hidden = true; };
+let mapRef = null;
+function chooseStation(s) {
+  closePicker();
+  away = !s || s.codes.includes(home) ? null : { codes: s.codes, name: s.name };
+  board = null;
+  $("station").innerHTML = `${escapeHtml(s ? s.name : "Court House")}<span class="caret">▾</span>`;
+  $("arrivals").innerHTML = `<div class="notice">Loading arrivals…</div>`;
+  poll();
+  if (!away) recenter?.();
+  else mapRef?.flyTo({ center: [s.lon, s.lat], zoom: Math.max(mapRef.getZoom(), 12.5), duration: 800 });
+}
+$("station").addEventListener("click", openPicker);
+// The page itself never scrolls; focusing a button in the half-hidden sheet
+// would otherwise scroll the (overflow: hidden) body to bring it into view.
+document.body.addEventListener("scroll", () => { document.body.scrollTop = 0; });
+$("picker").addEventListener("input", () => renderPicker());
+$("picker").addEventListener("click", async ev => {
+  if (ev.target.closest(".tclose")) closePicker();
+  else if (ev.target.closest("[data-home]")) chooseStation(null);
+  else if (ev.target.closest("[data-code]")) {
+    const code = ev.target.closest("[data-code]").dataset.code;
+    chooseStation(stations.find(s => s.codes.includes(code)));
+  } else if (ev.target.closest("[data-near]")) {
+    if (!stations || !navigator.geolocation) { renderPicker("Location unavailable"); return; }
+    renderPicker("Finding you…");
+    navigator.geolocation.getCurrentPosition(
+      pos => chooseStation(nearestStation(stations, pos.coords.longitude, pos.coords.latitude)),
+      () => renderPicker("Location unavailable — allow it in Settings, or search"),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+  }
+});
+
 // Coming back from the background: don't show a false red "Board offline" while
 // waiting out the rest of the poll interval.
 document.addEventListener("visibilitychange", () => {
@@ -209,6 +283,7 @@ function endDrag() {
 }
 for (const el of [$("handle"), document.querySelector(".shdr")]) {
   el.addEventListener("pointerdown", ev => {
+    if (ev.target.closest("button")) return;   // the station name opens the picker instead
     drag = { y: ev.clientY, offset };
     sheet.classList.add("dragging");
     ev.currentTarget.setPointerCapture(ev.pointerId);
@@ -233,6 +308,7 @@ function startMap() {
   createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
     .then(m => {
       recenter = () => m.recenter();
+      mapRef = m.map;
       // Allow zooming out to the whole system, but not off into the void.
       m.map.setMaxBounds([[-77.75, 38.6], [-76.6, 39.3]]);
       m.map.setMinZoom(8.5);

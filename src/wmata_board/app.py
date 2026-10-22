@@ -117,11 +117,18 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             await asyncio.gather(*waits)
 
     @app.get("/api/board")
-    async def board():
+    async def board(station: str | None = Query(None, pattern=r"^[A-Z]\d{2}$")):
+        """`station`: any station code (the phone's picker); home when omitted."""
+        other = None
+        if station and station != config.board.station:
+            net = feeds["network"].state.value if "network" in feeds else None
+            other = next((s for s in (net or {}).get("stations", []) if station in s["codes"]), None)
+            if other is None:
+                return JSONResponse({"error": "unknown station"}, status_code=404, headers=NO_STORE)
         await want("arrivals", "incidents")
         body = build_board(config=config, arrivals=feeds["arrivals"].state,
                            incidents=feeds["incidents"].state, station=feeds["station"].state,
-                           now=clock(), now_local=datetime.now(tz), version=version)
+                           now=clock(), now_local=datetime.now(tz), version=version, other=other)
         return JSONResponse(body, headers=NO_STORE)
 
     @app.get("/api/positions")
