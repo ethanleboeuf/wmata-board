@@ -28,7 +28,7 @@ const LABEL_HINTS = {
 
 // A little blonde woman in a pink dress and a conductor's cap sitting on the
 // badge, one arm waving, with her pet rat beside her (styled in board.css).
-const RIDER = `<g transform="scale(1.6) translate(-1.2,3)"><g class="bob">` +
+const RIDER = `<g transform="scale(2.4) translate(-1.2,4.2)"><g class="bob">` +
   `<path class="hair" d="M-5.4,-26 C-5.6,-20 -6.4,-17.5 -4.2,-16.4 L4.2,-16.4 C6.4,-17.5 5.6,-20 5.4,-26 A5.4,5.6 0 0 0 -5.4,-26 Z"/>` +
   `<path class="skin" d="M-2.6,-12 L-3.2,-8.6 M2.6,-12 L3.2,-8.6 M-2,-18.6 L-6.2,-14.4"/>` +
   `<path class="wave skin" d="M2,-18.6 L6.6,-23.4"/>` +
@@ -40,7 +40,7 @@ const RIDER = `<g transform="scale(1.6) translate(-1.2,3)"><g class="bob">` +
   `<path class="band" d="M-3.95,-27.6 L3.95,-27.6"/>` +
   `<path class="cap" d="M-4.3,-26.6 L3.6,-26.6 Q6,-26.5 6.6,-25.4 L-4.3,-25.6 Z"/>` +
   `<circle class="badge" cx="0" cy="-28.7" r=".6"/>` +
-  `</g><g class="rat">` +
+  `</g><g class="rat" transform="translate(-1.6,1)">` +
   `<path class="tail" d="M3.6,-9.4 Q1.6,-7.6 3.2,-6.2 Q4.6,-5.2 3.6,-4"/>` +
   `<ellipse class="fur" cx="6" cy="-9.6" rx="2.9" ry="1.9"/>` +
   `<circle class="fur" cx="8.6" cy="-10.6" r="1.6"/>` +
@@ -269,6 +269,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         e.rider.innerHTML = RIDER;
         e.g.appendChild(e.rider);
       } else if (!on && e.rider) { e.rider.remove(); e.rider = null; }
+      if (on && gTrains.lastChild !== e.g) gTrains.appendChild(e.g);   // she rides on top
       if (x > 0 && y > 0 && x < W && y < H && v.opacity > 0.5) visible++;
       seen.add(v.id);
     }
