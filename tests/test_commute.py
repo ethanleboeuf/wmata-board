@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, build_commute, commute_mode, departures,
-                                 next_slot, plan_from_hospital, plan_from_station, plan_morning)
+                                 next_slot, plan_from_hospital, plan_from_station, plan_morning,
+                                 plan_to_station)
 from wmata_board.config import CommuteConfig
 from wmata_board.state import FeedState
 from wmata_board.trips import LiveTrip, Stop, Trip, TripUpdates
@@ -123,6 +124,15 @@ def test_morning_row_is_live_only_when_both_trains_are():
     assert plan_morning(trips, CFG, at("7:30"), ET)[0]["live"] is True
 
 
+def test_morning_to_takoma():
+    rows = plan_to_station(MORNING, CFG, at("7:30"), ET)
+    # red_in reaches B07 at 23:59 in these fixtures; only the connection matters here
+    assert [(r["leave"], r["red_leave"], r["mc_wait"]) for r in rows] == [
+        ("7:38", "7:51", 2), ("7:45", "8:01", 6), ("7:48", "8:01", 2)]
+    assert rows[0]["arrive"] == "11:59"
+    assert rows[0]["legs"][1] == {"trip": "r751", "line": "RD", "from": "A01", "to": "B07"}
+
+
 # ---- evening ---------------------------------------------------------------------
 
 EVENING = [
@@ -181,6 +191,7 @@ def test_morning_payload_from_the_timetable():
     assert body["mode"] == AM and body["live"] is False and body["notice"] is None
     assert body["am"]["shuttles"] == ["8:12", "8:18"]
     assert body["am"]["rows"][0]["shuttle"] == "8:06"
+    assert body["am"]["station"][0]["red_leave"] == "7:51"
     assert body["wall_platform"] == "2"
 
 

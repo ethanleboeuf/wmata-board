@@ -69,3 +69,8 @@ test("commute rows carry their index for tapping", () => {
   assert.match(html, /data-i="0" class="crow am target"/);
   assert.match(html, /data-i="1" class="crow am target"/);
 });
+
+test("morning-to-Takoma card heading", () => {
+  const row = { leave: "7:45", arrive: "8:14", mc_wait: 3, legs: amRow.legs };
+  assert.match(commuteCardHtml(row, "am-station", [null, null], "Takoma"), /<h3>Leave 7:45 → Takoma 8:14<\/h3>/);
+});

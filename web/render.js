@@ -55,13 +55,40 @@ function amRow(r, i) {
     `<span class="cs">${escapeHtml(r.shuttle)}<small>+${r.spare}</small></span>${sched(r.live)}</div>`;
 }
 
-export function commuteAmHtml(c) {
-  const am = c.am || { shuttles: [], rows: [] };
-  const title = `${escapeHtml(c.name)}${am.shuttles.length ? ` · shuttle ${am.shuttles.map(escapeHtml).join(" / ")}` : ""}`;
-  const head = `<div class="crow am chead"><span></span><span>Leave</span><span>Metro Ctr wait</span>` +
-    `<span>Brookland</span><span class="r">Shuttle</span><span></span></div>`;
+function amStationRow(r, i) {
+  return `<div data-i="${i}" class="crow am station">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>` +
+    `${wait(r.mc_wait)}<span class="ct dim">${escapeHtml(r.red_leave)}</span>` +
+    `<span class="ct">${escapeHtml(r.arrive)}</span>${sched(r.live)}</div>`;
+}
+
+// Hospital/station switch: `attr` is data-dest (morning) or data-origin (evening).
+function ctabs(attr, chosen, hospital, station) {
+  const tab = (key, label) =>
+    `<button class="ctab${(key === "station") === (chosen === "station") ? " on" : ""}" data-${attr}="${key}">${escapeHtml(label)}</button>`;
+  return `<div class="ctabs">${tab("hospital", hospital)}${tab("station", station || "Station")}</div>`;
+}
+
+// Wall: commuteAmHtml(c), the hospital only. Phone: with tabs, and dest "station" for Takoma.
+export function commuteAmHtml(c, dest = "hospital", { tabs = false } = {}) {
+  const am = c.am || { shuttles: [], rows: [], station: [], station_name: "" };
+  const toStation = tabs && dest === "station";
+  const shuttles = am.shuttles.length ? ` · shuttle ${am.shuttles.map(escapeHtml).join(" / ")}` : "";
+  const title = !tabs ? `${escapeHtml(c.name)}${shuttles}` : `To work${toStation ? "" : shuttles}`;
+  const head = toStation
+    ? `<div class="crow am station chead"><span></span><span>Leave</span><span>Metro Ctr wait</span>` +
+      `<span>Red</span><span>${escapeHtml(am.station_name || "Arrive")}</span><span></span></div>`
+    : `<div class="crow am chead"><span></span><span>Leave</span><span>Metro Ctr wait</span>` +
+      `<span>Brookland</span><span class="r">Shuttle</span><span></span></div>`;
   return `<section class="commute"><h2>${title}</h2>` +
-    cbody(c, am.rows, head, amRow, "No connections found") + `</section>`;
+    (tabs ? ctabs("dest", dest, c.name, am.station_name) : "") +
+    cbody(c, toStation ? am.station || [] : am.rows, head, toStation ? amStationRow : amRow, "No connections found") +
+    `</section>`;
+}
+
+// Phone, when the panel was opened with the Commute button: pick the direction.
+export function commuteModeHtml(mode) {
+  const tab = (key, label) => `<button class="ctab${key === mode ? " on" : ""}" data-mode="${key}">${label}</button>`;
+  return `<div class="ctabs cmode">${tab("am", "Morning")}${tab("pm", "Evening")}</div>`;
 }
 
 function homeTail(r) {
@@ -71,8 +98,6 @@ function homeTail(r) {
 export function commutePmHtml(c, origin) {
   const pm = c.pm || { hospital: [], station: [], station_name: "" };
   const fromStation = origin === "station";
-  const tab = (key, label) =>
-    `<button class="ctab${(key === "station") === fromStation ? " on" : ""}" data-origin="${key}">${escapeHtml(label)}</button>`;
   const head = fromStation
     ? `<div class="crow pm station chead"><span>Red</span><span>Metro Ctr wait</span><span></span><span>Home</span><span></span></div>`
     : `<div class="crow pm chead"><span>Shuttle</span><span>Red</span><span>Metro Ctr wait</span><span></span><span>Home</span><span></span></div>`;
@@ -81,7 +106,7 @@ export function commutePmHtml(c, origin) {
     : (r, i) => `<div data-i="${i}" class="crow pm"><span class="ct">${escapeHtml(r.shuttle)}</span>` +
         `<span class="ct dim">${escapeHtml(r.red_leave)}</span>${homeTail(r)}</div>`;
   return `<section class="commute"><h2>Home · from</h2>` +
-    `<div class="ctabs">${tab("hospital", "Hospital")}${tab("station", pm.station_name || "Station")}</div>` +
+    ctabs("origin", origin, "Hospital", pm.station_name) +
     cbody(c, fromStation ? pm.station : pm.hospital, head, row, "No connections found") + `</section>`;
 }
 
@@ -136,11 +161,12 @@ function legHtml(leg, trip) {
 }
 
 // Commute row tap: both legs in full, with the transfer and shuttle between.
-// kind: "am" | "hospital" | "station"; trips[i]: undefined loading, null failed.
-export function commuteCardHtml(row, kind, trips) {
+// kind: "am" | "am-station" | "hospital" | "station"; trips[i]: undefined loading, null failed.
+export function commuteCardHtml(row, kind, trips, stationName = "Takoma") {
   const [a, b] = row.legs;
   const parts = [];
   if (kind === "am") parts.push(`<h3>Leave ${escapeHtml(row.leave)} → shuttle ${escapeHtml(row.shuttle)}</h3>`);
+  else if (kind === "am-station") parts.push(`<h3>Leave ${escapeHtml(row.leave)} → ${escapeHtml(stationName)} ${escapeHtml(row.arrive)}</h3>`);
   else if (kind === "hospital") {
     parts.push(`<h3>Shuttle ${escapeHtml(row.shuttle)} → home ${escapeHtml(row.home)}</h3>`);
     parts.push(step(`Shuttle ${row.shuttle} → Brookland ${row.brookland}`));

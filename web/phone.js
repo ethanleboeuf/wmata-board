@@ -2,7 +2,8 @@
 // and every alert (no rotation -- there's room to list them). Tapping a train
 // on the map or a commute row opens a trip card.
 import { formatClock, pillState, arrivalsExpired, mergeAlerts } from "./format.js";
-import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, trainCardHtml, commuteCardHtml } from "./render.js";
+import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteModeHtml, trainCardHtml,
+         commuteCardHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute, tripQuery } from "./commute.js";
 
@@ -40,28 +41,51 @@ function renderArrivals(force = false) {
   $("arrivals").innerHTML = arrivalsPanelHtml(board, expired);
 }
 
-// Commute card at the top of the sheet during the morning/evening windows.
-// Evenings, the Hospital/Takoma choice is remembered on this phone.
-let commute = null, origin = "hospital";
-try { origin = localStorage.getItem("commuteFrom") || origin; } catch { /* private mode */ }
+// Commute card at the top of the sheet during the morning/evening windows, or
+// any time via the Commute button (`manual`: "am" | "pm", with a switch between
+// them). The button also hides an automatic panel, until the page reloads. The
+// hospital/Takoma choices (morning `dest`, evening `origin`) are remembered here.
+const stored = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch { return fallback; } };
+const store = (key, value) => { try { localStorage.setItem(key, value); } catch { /* not remembered, still switched */ } };
+let commute = null, manual = null, hidden = false;
+let origin = stored("commuteFrom", "hospital"), dest = stored("commuteTo", "hospital");
+const commuteShown = () => !!commute && !hidden;
 function renderCommute() {
   const el = $("commute");
-  el.innerHTML = !commute ? "" : commute.mode === "am" ? commuteAmHtml(commute) : commutePmHtml(commute, origin);
+  $("cbtn").classList.toggle("on", commuteShown());
+  if (!commuteShown()) { el.innerHTML = ""; return; }
+  el.innerHTML = (manual ? commuteModeHtml(commute.mode) : "") +
+    (commute.mode === "am" ? commuteAmHtml(commute, dest, { tabs: true }) : commutePmHtml(commute, origin));
 }
 $("commute").addEventListener("click", ev => {
   const row = ev.target.closest("[data-i]");
   if (row && commute) { openCommuteRow(Number(row.dataset.i)); return; }
-  const tab = ev.target.closest("[data-origin]");
+  const tab = ev.target.closest("[data-origin], [data-dest], [data-mode]");
   if (!tab) return;
-  origin = tab.dataset.origin;
-  try { localStorage.setItem("commuteFrom", origin); } catch { /* not remembered, still switched */ }
+  if (tab.dataset.mode) {
+    if (tab.dataset.mode !== commute?.mode) { manual = tab.dataset.mode; commutePoller.poll(); }
+    return;
+  }
+  if (tab.dataset.origin) store("commuteFrom", origin = tab.dataset.origin);
+  else store("commuteTo", dest = tab.dataset.dest);
   renderCommute();
 });
-const commutePoller = startCommute(c => { commute = c; renderCommute(); renderAlerts(); });
+$("cbtn").addEventListener("click", () => {
+  if (commuteShown()) {
+    if (manual) { manual = null; commute = null; } else hidden = true;
+  } else {
+    hidden = false;
+    if (!commute) manual = new Date().getHours() < 12 ? "am" : "pm";
+  }
+  renderCommute();
+  renderAlerts();
+  commutePoller.poll();
+});
+const commutePoller = startCommute(c => { commute = c; renderCommute(); renderAlerts(); }, () => manual);
 
 // The board's alerts, plus (while the commute card is up) Red line ones.
 function renderAlerts() {
-  $("alerts").innerHTML = mergeAlerts(board?.alerts, commute?.alerts)
+  $("alerts").innerHTML = mergeAlerts(board?.alerts, commuteShown() ? commute.alerts : null)
     .map(a => `<div class="alert">${alertHtml(a)}</div>`).join("");
 }
 
@@ -99,13 +123,16 @@ function openTrain(train) {
   });
 }
 function openCommuteRow(i) {
-  const kind = commute.mode === "am" ? "am" : origin === "station" ? "station" : "hospital";
-  const rows = kind === "am" ? commute.am.rows : kind === "station" ? commute.pm.station : commute.pm.hospital;
-  const row = rows[i];
+  const kind = commute.mode === "am" ? (dest === "station" ? "am-station" : "am")
+    : origin === "station" ? "station" : "hospital";
+  const rows = { am: commute.am?.rows, "am-station": commute.am?.station,
+                 station: commute.pm?.station, hospital: commute.pm?.hospital }[kind];
+  const row = rows?.[i];
   if (!row?.legs) return;
+  const name = commute.am?.station_name;
   openCard({
-    loading: commuteCardHtml(row, kind, [undefined, undefined]),
-    load: async () => commuteCardHtml(row, kind, await Promise.all(row.legs.map(l => fetchTrip(l.trip)))),
+    loading: commuteCardHtml(row, kind, [undefined, undefined], name),
+    load: async () => commuteCardHtml(row, kind, await Promise.all(row.legs.map(l => fetchTrip(l.trip))), name),
   });
 }
 

@@ -35,6 +35,12 @@ body.phone * { box-sizing: border-box; }
 .phone .crow.am { grid-template-columns: 28px 46px 1fr 44px 62px 40px; }
 .phone .crow.pm { grid-template-columns: 46px 44px 1fr 26px 46px 40px; }
 .phone .crow.pm.station { grid-template-columns: 46px 1fr 26px 46px 40px; }
+.phone .crow.am.station { grid-template-columns: 28px 46px 1fr 46px 50px 40px; }
+.phone .cmode { margin-top: 12px; }
+.cbtn { position: absolute; right: 68px; top: calc(14px + env(safe-area-inset-top)); height: 44px; padding: 0 16px;
+        z-index: 3; border-radius: 22px; border: 1px solid #2a313c; background: rgba(13,17,23,.9); color: #e6ebf1;
+        font: 700 14px Inter, Helvetica, Arial, sans-serif; letter-spacing: .5px; }
+.cbtn.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }
 .phone .crow .chip { width: 26px; height: 26px; font-size: 11px; }
 .phone .crow.chead { height: auto; font-size: 9px; letter-spacing: .5px; padding-bottom: 3px; }
 .phone .crow.cempty { font-size: 15px; padding: 10px 0; }

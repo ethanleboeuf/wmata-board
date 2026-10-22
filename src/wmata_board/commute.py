@@ -2,7 +2,8 @@
 
 Morning (weekdays, wall + phone): each Orange/Silver train from home, the
 first Red train at Metro Center she can make after the platform-to-platform
-walk, Brookland arrival, and the first shuttle slot she can walk to.
+walk, Brookland arrival, and the first shuttle slot she can walk to. The
+phone can also show the same trip ending at the other station (Takoma).
 Evening (phone): home again from either the hospital (shuttle -> Brookland ->
 Red) or the other evening start (Takoma: Red), transferring at Metro Center.
 
@@ -131,6 +132,24 @@ def plan_morning(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo
     return rows
 
 
+def plan_to_station(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo) -> list[dict]:
+    """Morning to the other station (Takoma): home -> Metro Center -> Red."""
+    orsv, red = cfg.transfer
+    reds = departures(trips, red, cfg.evening_from, now)
+    rows = []
+    for first in departures(trips, cfg.home, orsv, now):
+        second = _first(reds, first.arrive + cfg.transfer_walk * 60)
+        if second is None:
+            break
+        rows.append({"line": first.line, "leave": clock(first.depart, tz),
+                     "mc_arrive": clock(first.arrive, tz), "red_leave": clock(second.depart, tz),
+                     "mc_wait": _min(second.depart) - _min(first.arrive), "arrive": clock(second.arrive, tz),
+                     "live": first.live and second.live, "legs": [first.as_json(), second.as_json()]})
+        if len(rows) == cfg.rows:
+            break
+    return rows
+
+
 def _home_from(trips: list[Trip], cfg: CommuteConfig, origin: str, now: float) -> tuple[list[Leg], list[Leg]]:
     orsv, red = cfg.transfer
     return departures(trips, origin, red, now), departures(trips, orsv, cfg.home, now)
@@ -213,12 +232,13 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
         return body
     trips = merge_trips(sched, live, now)
     body["live"] = live is not None
+    station_name = (schedule.value or {}).get("names", {}).get(cfg.evening_from, cfg.evening_from)
     if mode == AM:
         body["am"] = {"shuttles": [f"{m // 60 % 12 or 12}:{m % 60:02d}" for m in cfg.shuttles],
-                      "rows": plan_morning(trips, cfg, now, tz)}
+                      "rows": plan_morning(trips, cfg, now, tz),
+                      "station": plan_to_station(trips, cfg, now, tz), "station_name": station_name}
     else:
-        names = (schedule.value or {}).get("names", {})
         body["pm"] = {"hospital": plan_from_hospital(trips, cfg, now, tz),
                       "station": plan_from_station(trips, cfg, now, tz),
-                      "station_name": names.get(cfg.evening_from, cfg.evening_from)}
+                      "station_name": station_name}
     return body

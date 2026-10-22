@@ -56,3 +56,19 @@ test("commute alerts join the board's, each once", async () => {
   assert.deepEqual(mergeAlerts([a("1")], undefined).map(x => x.id), ["1"]);
   assert.deepEqual(mergeAlerts(undefined, null), []);
 });
+
+test("phone morning: hospital/Takoma tabs and Takoma rows", async () => {
+  const { commuteModeHtml } = await import("../../web/render.js");
+  const c = am([amRow()]);
+  c.am.station_name = "Takoma";
+  c.am.station = [{ line: "OR", leave: "7:45", mc_arrive: "7:55", red_leave: "7:58", mc_wait: 3, arrive: "8:14", live: false }];
+  assert.doesNotMatch(commuteAmHtml(c), /ctab/);   // the wall: no tabs
+  const hosp = commuteAmHtml(c, "hospital", { tabs: true });
+  assert.match(hosp, /class="ctab on" data-dest="hospital">Children&#39;s National/);
+  assert.match(hosp, /8:06<small>\+3/);
+  const tak = commuteAmHtml(c, "station", { tabs: true });
+  assert.match(tak, /class="ctab on" data-dest="station">Takoma/);
+  assert.match(tak, /crow am station">.*?7:45.*?w-short.*?<span class="ct dim">7:58<\/span><span class="ct">8:14<\/span>.*?sched/);
+  assert.doesNotMatch(tak, /8:06/);
+  assert.match(commuteModeHtml("pm"), /class="ctab" data-mode="am">Morning.*class="ctab on" data-mode="pm">Evening/);
+});

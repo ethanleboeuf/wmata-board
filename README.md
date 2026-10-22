@@ -29,7 +29,10 @@ on the Pi (`chmod 600`) or a gitignored `.env` locally.
 Weekday mornings (6:30–8:10) the wall and phone show a Children's National
 panel: every Court House train with its Metro Center wait, Brookland arrival
 and the Brookland shuttle it makes. Weekday evenings (4:00–6:30) the phone
-shows the way home from the hospital or Takoma. Settings live in `[commute]` in
+shows the way home from the hospital or Takoma. On the phone, the morning panel
+can also end at Takoma instead of the shuttle, and the **Commute** button (top
+right) opens the panel at any time, with a Morning/Evening switch, or hides it.
+Settings live in `[commute]` in
 `config.toml`. Preview it at any time of day with `?commute=am&at=7:30` (or
 `commute=pm&at=17:00`) on `/` or `/phone`. The timetable is cached in
 `data/schedule.json` and rebuilt daily. Rows marked `sched` come from the
