@@ -49,7 +49,7 @@ function cbody(c, rows, head, row, empty) {
 
 // data-i: the phone opens a row's trip card by index.
 function amRow(r, i) {
-  const cls = r.target ? " target" : r.late ? " late" : "";
+  const cls = r.target ? " target" : "";
   return `<div data-i="${i}" class="crow am${cls}">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>${wait(r.mc_wait)}` +
     `<span class="ct dim">${escapeHtml(r.brookland)}</span>` +
     `<span class="cs">${escapeHtml(r.shuttle)}<small>+${r.spare}</small></span>${sched(r.live)}</div>`;

@@ -93,7 +93,6 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .cs { font-size: 2.6cqw; font-weight: 800; text-align: right; }
 .crow.target { background: linear-gradient(90deg, rgba(247,195,204,0) 0, rgba(247,195,204,.08) 100%); }
 .crow.target .cs { color: #f7c3cc; }
-.crow.late { opacity: .45; }
 .sched { justify-self: end; font-size: .9cqw; font-weight: 700; letter-spacing: .12cqw; text-transform: uppercase;
          color: #5d6875; border: .08cqw solid #3b4a5e; border-radius: .3cqw; padding: .1cqw .4cqw; }
 .ctabs { display: flex; gap: .6cqw; margin: .2cqw 0 .6cqw; }

@@ -94,7 +94,6 @@ def test_morning_rows_connect_on_seconds():
         ("7:48", "8:01", 2, "8:13", "8:18", 5),
     ]
     assert [r["target"] for r in rows] == [False, True, True]
-    assert not any(r["late"] for r in rows)
     assert rows[0]["line"] == "SV" and rows[1]["line"] == "OR"
     assert rows[0]["mc_arrive"] == "7:49"
     assert rows[0]["legs"] == [{"trip": "sv738", "line": "SV", "from": "K01", "to": "C01"},
@@ -106,10 +105,10 @@ def test_morning_skips_trains_reaching_shuttles_well_before_the_targets():
     assert plan_morning(early + MORNING, CFG, at("6:45"), ET)[0]["leave"] == "7:38"
 
 
-def test_morning_flags_shuttles_after_the_targets():
+def test_morning_lists_shuttles_after_the_targets():
     trips = [orsv("sv758", "7:58", "8:09"), red_in("r811", "8:11", "8:23")]
     [row] = plan_morning(trips, CFG, at("7:50"), ET)
-    assert (row["shuttle"], row["target"], row["late"]) == ("8:30", False, True)
+    assert (row["shuttle"], row["target"]) == ("8:30", False)
 
 
 def test_morning_drops_trains_already_gone_and_caps_rows():

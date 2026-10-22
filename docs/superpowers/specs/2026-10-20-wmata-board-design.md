@@ -207,7 +207,7 @@ in chat (no separate spec/plan):
   One row per Orange/Silver train: leave time, Metro Center wait, Brookland
   arrival, the first shuttle she can walk to, minutes spare. All options are
   shown, not a single pick. Rows making the 8:12 / 8:18 shuttle are
-  highlighted; rows reaching a later one are dimmed. On the wall the panel
+  highlighted; rows reaching a later one look like any other. On the wall the panel
   replaces the westbound list.
 - **Evening** (weekdays 16:00–18:30, phone only): home to Court House from
   either the hospital (shuttle → Brookland → Red) or Takoma (B07, Red),

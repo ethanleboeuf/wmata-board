@@ -4,7 +4,7 @@ import { commuteAmHtml, commutePmHtml } from "../../web/render.js";
 import { waitClass } from "../../web/format.js";
 
 const amRow = over => ({ line: "SV", leave: "7:38", mc_arrive: "7:49", red_leave: "7:51", mc_wait: 2,
-  brookland: "8:03", shuttle: "8:06", spare: 3, target: false, late: false, live: true, ...over });
+  brookland: "8:03", shuttle: "8:06", spare: 3, target: false, live: true, ...over });
 const am = (rows, over = {}) => ({ mode: "am", name: "Children's National", notice: null,
   am: { shuttles: ["8:12", "8:18"], rows }, ...over });
 
@@ -14,12 +14,12 @@ test("wait colours", () => {
 
 test("morning rows: leave, wait, Brookland, shuttle + spare", () => {
   const html = commuteAmHtml(am([amRow(), amRow({ leave: "7:45", line: "OR", mc_wait: 7, shuttle: "8:18", target: true, live: false }),
-    amRow({ shuttle: "8:30", late: true })]));
+    amRow({ shuttle: "8:30" })]));
   assert.match(html, /Children&#39;s National · shuttle 8:12 \/ 8:18/);
   assert.match(html, /<span class="ct">7:38<\/span><span class="cw w-short">2<small>min<\/small><\/span>/);
   assert.match(html, /<span class="cs">8:06<small>\+3<\/small><\/span>/);
   assert.match(html, /crow am target">.*?7:45.*?w-long.*?<span class="sched">sched<\/span>/);
-  assert.match(html, /crow am late">/);
+  assert.match(html, /<div data-i="2" class="crow am">/);   // after the targets: shown as normal
   assert.equal((html.match(/class="sched"/g) || []).length, 1);
 });
 

@@ -124,7 +124,7 @@ def plan_morning(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo
             "mc_wait": _min(second.depart) - _min(first.arrive),
             "brookland": clock(second.arrive, tz), "shuttle": clock(shuttle, tz),
             "spare": _min(shuttle) - _min(second.arrive),
-            "target": slot in cfg.shuttles, "late": bool(cfg.shuttles) and slot > max(cfg.shuttles),
+            "target": slot in cfg.shuttles,
             "live": first.live and second.live, "legs": [first.as_json(), second.as_json()],
         })
         if len(rows) == cfg.rows:
