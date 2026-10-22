@@ -73,3 +73,6 @@ body.phone * { box-sizing: border-box; }
 .trip + .trip { margin-top: 10px; }
 .phone #commute .crow[data-i] { cursor: pointer; }
 .phone #commute .crow[data-i]:active { background: #151e29; }
+.tride { display: block; margin: 10px auto 2px; min-height: 36px; padding: 6px 16px; border-radius: 18px;
+         border: 1px solid #2a313c; background: transparent; color: #aab3c0; font: 700 13px Inter, Helvetica, Arial, sans-serif; }
+.tride.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }

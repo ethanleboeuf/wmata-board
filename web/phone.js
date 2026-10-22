@@ -1,7 +1,7 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them). Tapping a train
 // on the map or a commute row opens a trip card.
-import { formatClock, pillState, arrivalsExpired, mergeAlerts } from "./format.js";
+import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan, rideTrip } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteModeHtml, trainCardHtml,
          commuteCardHtml } from "./render.js";
 import { createMap } from "./map.js";
@@ -90,8 +90,13 @@ function renderAlerts() {
 }
 
 // ---- trip card: one floating card, refreshed while open ----
+// A card for a known train has an "I'm on this one" button: that trip (a
+// commute row: both, switching at Metro Center) gets a little rider on the map.
 const CARD_REFRESH_MS = 15000;
-let card = null;   // {load: async () => html} while open
+let card = null;   // {legs, load: async () => html, html, trips} while open
+let ride = null;   // see ridePlan
+try { ride = JSON.parse(localStorage.getItem("ride")); } catch { /* none */ }
+const riding = () => rideTrip(ride, Date.now());
 async function fetchTrip(id) {
   try {
     const r = await fetch(`/api/trip/${encodeURIComponent(id)}${tripQuery()}`,
@@ -99,9 +104,21 @@ async function fetchTrip(id) {
     return r.ok ? await r.json() : null;
   } catch { return null; }
 }
+function rideButton() {
+  if (!card?.legs.length) return "";
+  const on = riding() !== null && ride.trips.join() === card.legs.map(l => l.trip).join();
+  return `<button class="tride${on ? " on" : ""}">${on ? "🙋 Riding along · hop off" : "🙋 I'm on this one"}</button>`;
+}
 function showCard(html) {
-  $("card").innerHTML = `<button class="tclose" aria-label="Close">✕</button>${html}`;
+  if (card) card.html = html;
+  $("card").innerHTML = `<button class="tclose" aria-label="Close">✕</button>${html}${rideButton()}`;
   $("card").hidden = false;
+}
+function toggleRide() {
+  const on = $("card").querySelector(".tride.on");
+  ride = on ? null : ridePlan(card.legs, card.trips || [], Date.now());
+  try { localStorage.setItem("ride", JSON.stringify(ride)); } catch { /* this page only */ }
+  showCard(card.html);
 }
 async function openCard(next) {
   card = next;
@@ -114,13 +131,21 @@ async function openCard(next) {
   }
 }
 function closeCard() { card = null; $("card").hidden = true; }
-$("card").addEventListener("click", ev => { if (ev.target.closest(".tclose")) closeCard(); });
+$("card").addEventListener("click", ev => {
+  if (ev.target.closest(".tclose")) closeCard();
+  else if (ev.target.closest(".tride")) toggleRide();
+});
 
 function openTrain(train) {
-  openCard({
+  const next = {
+    legs: train.trip_id ? [{ trip: train.trip_id, to: null }] : [],
     loading: trainCardHtml(train, null).replace("No stop predictions for this train", "Loading…"),
-    load: async () => trainCardHtml(train, train.trip_id ? await fetchTrip(train.trip_id) : null),
-  });
+    load: async () => {
+      next.trips = [train.trip_id ? await fetchTrip(train.trip_id) : null];
+      return trainCardHtml(train, next.trips[0]);
+    },
+  };
+  openCard(next);
 }
 function openCommuteRow(i) {
   const kind = commute.mode === "am" ? (dest === "station" ? "am-station" : "am")
@@ -130,10 +155,15 @@ function openCommuteRow(i) {
   const row = rows?.[i];
   if (!row?.legs) return;
   const name = commute.am?.station_name;
-  openCard({
+  const next = {
+    legs: row.legs,
     loading: commuteCardHtml(row, kind, [undefined, undefined], name),
-    load: async () => commuteCardHtml(row, kind, await Promise.all(row.legs.map(l => fetchTrip(l.trip))), name),
-  });
+    load: async () => {
+      next.trips = await Promise.all(row.legs.map(l => fetchTrip(l.trip)));
+      return commuteCardHtml(row, kind, next.trips, name);
+    },
+  };
+  openCard(next);
 }
 
 // Coming back from the background: don't show a false red "Board offline" while
@@ -194,7 +224,7 @@ const fitPadding = () => ({
 let recenter = null;
 $("recenter").addEventListener("click", () => recenter?.());
 function startMap() {
-  createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
+  createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding, rider: riding })
     .then(m => {
       recenter = () => m.recenter();
       // Allow zooming out to the whole system, but not off into the void.

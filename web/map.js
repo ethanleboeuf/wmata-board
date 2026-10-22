@@ -2,7 +2,8 @@
 // top draws lanes, stations, labels, landmarks and gliding trains, re-projected
 // with map.project() on every move so the wall and the phone share this file.
 // The overlay never takes pointer events (pans and pinches reach the map);
-// the phone hit-tests taps against the drawn trains with trainAt().
+// the phone hit-tests taps against the drawn trains with trainAt(). `rider`
+// (phone) names the trip that gets a little rider on top: () => trip_id | null.
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
@@ -24,6 +25,10 @@ const LABEL_HINTS = {
   A03: [-16, -4, "end", "Dupont Circle"], C07: [16, 6, "start", "Pentagon"],
   F05: [14, 22, "start", "Navy Yard"], B05: [-16, 5, "end", "Brookland"],
 };
+
+// A little person sitting on the badge, one arm waving (styled in board.css).
+const RIDER = `<g class="bob"><circle cx="0" cy="-25" r="4.6"/><path d="M0,-20 L0,-12 M-4,-8 L0,-12 L4,-8 M0,-18 L-6,-14"/>` +
+  `<path class="wave" d="M0,-18 L6,-24"/></g>`;
 
 const svgEl = (tag, attrs = {}) => {
   const e = document.createElementNS(NS, tag);
@@ -65,7 +70,7 @@ function badge(line) {
     `<path class="dir" d="M15,-4 L21,0 L15,4 Z" fill="#fff"/>`;
 }
 
-export async function createMap(el, { interactive = false, fit = "cover", padding = null } = {}) {
+export async function createMap(el, { interactive = false, fit = "cover", padding = null, rider = null } = {}) {
   const [net, style] = await Promise.all([getJson("/api/network"), loadStyle()]);
   if (!window.__pmtilesProtocol) {
     window.__pmtilesProtocol = new pmtiles.Protocol();
@@ -221,6 +226,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     if (now - lastFrame < 33) return;           // ~30 fps is plenty, and kind to the Pi
     lastFrame = now;
     const W = el.clientWidth, H = el.clientHeight, seen = new Set();
+    const riding = rider?.() ?? null;
     let visible = 0;
     for (const v of glider.at(now)) {
       let e = els.get(v.id);
@@ -238,6 +244,12 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       e.dir.setAttribute("transform", `rotate(${deg.toFixed(0)})`);
       e.g.style.opacity = v.opacity.toFixed(2);
       e.x = x; e.y = y; e.opacity = v.opacity;
+      const on = riding !== null && info.get(v.id)?.trip_id === riding;
+      if (on && !e.rider) {
+        e.rider = svgEl("g", { class: "rider" });
+        e.rider.innerHTML = RIDER;
+        e.g.appendChild(e.rider);
+      } else if (!on && e.rider) { e.rider.remove(); e.rider = null; }
       if (x > 0 && y > 0 && x < W && y < H && v.opacity > 0.5) visible++;
       seen.add(v.id);
     }

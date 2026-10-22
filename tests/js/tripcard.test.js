@@ -74,3 +74,21 @@ test("morning-to-Takoma card heading", () => {
   const row = { leave: "7:45", arrive: "8:14", mc_wait: 3, legs: amRow.legs };
   assert.match(commuteCardHtml(row, "am-station", [null, null], "Takoma"), /<h3>Leave 7:45 → Takoma 8:14<\/h3>/);
 });
+
+test("easter-egg rider: switches at Metro Center, gets off at the end", async () => {
+  const { ridePlan, rideTrip, RIDE_MAX_MS } = await import("../../web/format.js");
+  const legs = [{ trip: "or", to: "C01" }, { trip: "rd", to: "B05" }];
+  const t1 = { stops: [{ code: "K01", t: 1000 }, { code: "C01", t: 1600 }] };
+  const t2 = { stops: [{ code: "A01", t: 1800 }, { code: "B05", t: 2500 }] };
+  const ride = ridePlan(legs, [t1, t2], 900e3);
+  assert.deepEqual(ride, { trips: ["or", "rd"], switchAt: 1600e3, until: 2500e3 + 120000 });
+  assert.equal(rideTrip(ride, 1000e3), "or");
+  assert.equal(rideTrip(ride, 1700e3), "rd");
+  assert.equal(rideTrip(ride, 2700e3), null);
+  // already past the transfer: straight onto the second train
+  assert.equal(ridePlan(legs, [{ stops: [] }, t2], 1700e3).switchAt, 1700e3);
+  // a map train, or nothing known: one trip for up to 3 h
+  const solo = ridePlan([{ trip: "x", to: null }], [null], 0);
+  assert.deepEqual(solo, { trips: ["x"], switchAt: null, until: RIDE_MAX_MS });
+  assert.equal(rideTrip(null, 0), null);
+});

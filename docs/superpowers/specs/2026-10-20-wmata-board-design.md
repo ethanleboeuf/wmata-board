@@ -256,6 +256,10 @@ in chat (no separate spec/plan):
   stores headsigns (cache key bumped to `v2:` so it rebuilds).
 - Fixtures mode shifts the recorded trip updates to now (like positions); the
   timetable isn't shifted, so "min late" is meaningless there.
+- Easter egg: a card for a known train has "🙋 I'm on this one". That trip
+  gets a little waving rider on the phone map (a commute row: the first train
+  until it reaches Metro Center, then the second), until 2 min after the last
+  leg arrives (3 h for a map train). Kept in the phone's localStorage.
 
 ## Out of scope (for now)
 
