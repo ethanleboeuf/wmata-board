@@ -89,25 +89,21 @@ export function delayText(delayS) {
 
 // ---- easter egg: "I'm on this one" puts a little rider on her train ---------
 
-export const RIDE_MAX_MS = 3 * 3600 * 1000;
+// Sent to PUT /api/ride; the server says which trip she's on (ride.py), and
+// every map draws the rider on it.
+export const RIDE_MAX_S = 3 * 3600;
 const stopT = (trip, code) => trip?.stops?.find(s => s.code === code)?.t;
 
 // A ride from a card's legs ([{trip, to}]) and their fetched trips (null when a
-// fetch failed). It switches trains when the first reaches the transfer (now,
-// if it already has), and ends 2 min after the last leg arrives.
-export function ridePlan(legs, trips, nowMs) {
+// fetch failed), in epoch seconds. It switches trains when the first reaches
+// the transfer (now, if it already has), and ends 2 min after the last leg arrives.
+export function ridePlan(legs, trips, nowS) {
   const first = trips[0], last = trips[legs.length - 1];
-  const transfer = legs.length > 1 && first ? (stopT(first, legs[0].to) ?? nowMs / 1000) : null;
+  const transfer = legs.length > 1 && first ? (stopT(first, legs[0].to) ?? nowS) : null;
   const end = legs.at(-1)?.to ? stopT(last, legs.at(-1).to) : null;
   return {
     trips: legs.map(l => l.trip),
-    switchAt: transfer === null ? null : transfer * 1000,
-    until: end ? end * 1000 + 120000 : nowMs + RIDE_MAX_MS,
+    switch_at: transfer,
+    until: end && end + 120 > nowS ? end + 120 : nowS + RIDE_MAX_S,
   };
-}
-
-// The trip the rider is on right now, or null.
-export function rideTrip(ride, nowMs) {
-  if (!ride?.trips?.length || !(nowMs < ride.until)) return null;
-  return ride.trips.length > 1 && ride.switchAt !== null && nowMs >= ride.switchAt ? ride.trips[1] : ride.trips[0];
 }

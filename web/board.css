@@ -64,11 +64,14 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
                  paint-order: stroke; stroke: #0f151d; stroke-width: 5px; }
 .overlay .trains { transition: opacity 2s; }
 .overlay .trains.faded { opacity: 0; }
-.overlay .rider { fill: #f7c3cc; stroke: #f7c3cc; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round;
-                  paint-order: stroke; filter: drop-shadow(0 0 1.5px #0f151d) drop-shadow(0 0 1.5px #0f151d); }
-.overlay .rider path { fill: none; }
+.overlay .rider { stroke-linecap: round; stroke-linejoin: round;
+                  filter: drop-shadow(0 0 1.2px #0f151d) drop-shadow(0 0 1.2px #0f151d); }
+.overlay .rider .hair { fill: #f3d36b; }
+.overlay .rider .face { fill: #f6d2b8; }
+.overlay .rider .skin { fill: none; stroke: #f6d2b8; stroke-width: 1.9; }
+.overlay .rider .dress { fill: #f7a8c0; }
 .overlay .rider .bob { animation: rider-bob .5s ease-in-out infinite alternate; }
-.overlay .rider .wave { transform-origin: 0 -18px; animation: rider-wave .4s ease-in-out infinite alternate; }
+.overlay .rider .wave { transform-origin: 2px -18.6px; animation: rider-wave .4s ease-in-out infinite alternate; }
 @keyframes rider-bob { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 @keyframes rider-wave { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
 .pulse { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 3px solid #fff;

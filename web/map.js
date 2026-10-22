@@ -2,8 +2,8 @@
 // top draws lanes, stations, labels, landmarks and gliding trains, re-projected
 // with map.project() on every move so the wall and the phone share this file.
 // The overlay never takes pointer events (pans and pinches reach the map);
-// the phone hit-tests taps against the drawn trains with trainAt(). `rider`
-// (phone) names the trip that gets a little rider on top: () => trip_id | null.
+// the phone hit-tests taps against the drawn trains with trainAt(). The trip
+// /api/positions names as `ride` gets a little rider on top (the easter egg).
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
@@ -26,9 +26,16 @@ const LABEL_HINTS = {
   F05: [14, 22, "start", "Navy Yard"], B05: [-16, 5, "end", "Brookland"],
 };
 
-// A little person sitting on the badge, one arm waving (styled in board.css).
-const RIDER = `<g class="bob"><circle cx="0" cy="-25" r="4.6"/><path d="M0,-20 L0,-12 M-4,-8 L0,-12 L4,-8 M0,-18 L-6,-14"/>` +
-  `<path class="wave" d="M0,-18 L6,-24"/></g>`;
+// A little blonde woman in a pink dress sitting on the badge, one arm waving
+// (styled in board.css).
+const RIDER = `<g transform="scale(1.6) translate(0,3)"><g class="bob">` +
+  `<path class="hair" d="M-5.4,-26 C-5.6,-20 -6.4,-17.5 -4.2,-16.4 L4.2,-16.4 C6.4,-17.5 5.6,-20 5.4,-26 A5.4,5.6 0 0 0 -5.4,-26 Z"/>` +
+  `<path class="skin" d="M-2.6,-12 L-3.2,-8.6 M2.6,-12 L3.2,-8.6 M-2,-18.6 L-6.2,-14.4"/>` +
+  `<path class="wave skin" d="M2,-18.6 L6.6,-23.4"/>` +
+  `<path class="dress" d="M0,-19.6 L-5,-11.2 L5,-11.2 Z"/>` +
+  `<circle class="face" cx="0" cy="-24.6" r="3.6"/>` +
+  `<path class="hair" d="M-3.8,-25.2 C-3.4,-29.4 3.4,-29.4 3.8,-25.2 C1.8,-27 -1.6,-27.2 -3.8,-25.2 Z"/>` +
+  `</g></g>`;
 
 const svgEl = (tag, attrs = {}) => {
   const e = document.createElementNS(NS, tag);
@@ -70,7 +77,7 @@ function badge(line) {
     `<path class="dir" d="M15,-4 L21,0 L15,4 Z" fill="#fff"/>`;
 }
 
-export async function createMap(el, { interactive = false, fit = "cover", padding = null, rider = null } = {}) {
+export async function createMap(el, { interactive = false, fit = "cover", padding = null } = {}) {
   const [net, style] = await Promise.all([getJson("/api/network"), loadStyle()]);
   if (!window.__pmtilesProtocol) {
     window.__pmtilesProtocol = new pmtiles.Protocol();
@@ -171,7 +178,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   const glider = new Glider();
   const els = new Map();
   const info = new Map();   // vehicle id -> {line, cars, trip_id} from the last snapshot
-  let stale = true;
+  let stale = true, riding = null;
   let lastGoodMs = performance.now();
 
   function setStale(v) {
@@ -188,6 +195,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         ok = true;
         lastGoodMs = performance.now();
         setStale(body.stale);
+        riding = body.ride ?? null;
         if (body.feed_timestamp !== null) {
           const vs = [];
           info.clear();
@@ -226,7 +234,6 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     if (now - lastFrame < 33) return;           // ~30 fps is plenty, and kind to the Pi
     lastFrame = now;
     const W = el.clientWidth, H = el.clientHeight, seen = new Set();
-    const riding = rider?.() ?? null;
     let visible = 0;
     for (const v of glider.at(now)) {
       let e = els.get(v.id);

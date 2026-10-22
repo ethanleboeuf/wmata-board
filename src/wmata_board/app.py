@@ -25,6 +25,7 @@ from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
+from .ride import load_ride, parse_ride, ride_trip, save_ride
 from .state import FeedState
 from .tripinfo import station_names, trip_detail
 from .trips import scheduled_trips
@@ -98,6 +99,8 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     app = FastAPI(title="wmata-board", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.feeds = feeds
     app.state.data_dir = data_dir
+    ride_path = data_dir / "ride.json"
+    app.state.ride = load_ride(ride_path)
 
     async def want(*names: str) -> None:
         """Mark feeds wanted; if one is due (about to fetch, or fetching now --
@@ -136,7 +139,34 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "stale": age is None or age > POSITIONS_STALE_AFTER_S or feed_old,
             "error": st.error_kind,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
+            "ride": ride_trip(app.state.ride, wall_clock()),
         }, headers=NO_STORE)
+
+    # The easter egg: the phone's "I'm on this one" (see ride.py).
+    def ride_body() -> JSONResponse:
+        ride, now = app.state.ride, wall_clock()
+        current = ride_trip(ride, now)
+        return JSONResponse({"ride": ride.as_json() if current else None, "trip": current}, headers=NO_STORE)
+
+    @app.get("/api/ride")
+    async def get_ride():
+        return ride_body()
+
+    @app.put("/api/ride")
+    async def put_ride(request: Request):
+        try:
+            ride = parse_ride(await request.json(), wall_clock())
+        except ValueError as err:
+            return JSONResponse({"error": str(err)}, status_code=400, headers=NO_STORE)
+        app.state.ride = ride
+        save_ride(ride_path, ride)
+        return ride_body()
+
+    @app.delete("/api/ride")
+    async def delete_ride():
+        app.state.ride = None
+        save_ride(ride_path, None)
+        return ride_body()
 
     @app.get("/api/commute")
     async def commute(mode: str | None = Query(None, pattern=f"^({AM}|{PM})$"),

@@ -152,7 +152,7 @@ def test_positions_before_first_fetch(app):
     with TestClient(app) as c:
         body = c.get("/api/positions").json()
     assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
-                    "error": None, "vehicles": []}
+                    "error": None, "vehicles": [], "ride": None}
 
 
 def test_network_endpoint(app, fixtures):
@@ -324,3 +324,29 @@ def test_trip_endpoint_timetable_preview_and_404(trip_app):
     assert body["live"] is False and body["line"] == leg["line"]
     assert [s["code"] for s in body["stops"]][:2] == ["K01", "C01"]
     assert missing.status_code == 404 and missing.json() == {"error": "unknown trip"}
+
+
+def test_ride_is_shared_through_positions(fixtures, tmp_path):
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
+    now = [1000.0]
+    app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
+                     start_polling=False, clock=clock, wall_clock=lambda: now[0], data_dir=tmp_path)
+    with TestClient(app) as c:
+        assert c.get("/api/ride").json() == {"ride": None, "trip": None}
+        assert c.put("/api/ride", json={"trips": ["a/b"], "until": 2000}).status_code == 400
+        assert c.put("/api/ride", json={"trips": ["or1"], "until": 99999}).status_code == 400
+        r = c.put("/api/ride", json={"trips": ["or1", "rd2"], "switch_at": 1500, "until": 2000})
+        assert r.json()["trip"] == "or1"
+        assert c.get("/api/positions").json()["ride"] == "or1"
+        now[0] = 1600.0
+        assert c.get("/api/positions").json()["ride"] == "rd2"
+    # a restart keeps it
+    again = create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
+                       start_polling=False, clock=clock, wall_clock=lambda: now[0], data_dir=tmp_path)
+    with TestClient(again) as c:
+        assert c.get("/api/ride").json()["trip"] == "rd2"
+        assert c.delete("/api/ride").json() == {"ride": None, "trip": None}
+        now[0] = 2100.0
+    assert not (tmp_path / "ride.json").exists()

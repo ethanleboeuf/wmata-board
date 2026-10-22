@@ -1,7 +1,7 @@
 // Phone view: full-screen pannable map + draggable bottom sheet with arrivals
 // and every alert (no rotation -- there's room to list them). Tapping a train
 // on the map or a commute row opens a trip card.
-import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan, rideTrip } from "./format.js";
+import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteModeHtml, trainCardHtml,
          commuteCardHtml } from "./render.js";
 import { createMap } from "./map.js";
@@ -91,12 +91,18 @@ function renderAlerts() {
 
 // ---- trip card: one floating card, refreshed while open ----
 // A card for a known train has an "I'm on this one" button: that trip (a
-// commute row: both, switching at Metro Center) gets a little rider on the map.
+// commute row: both, switching at Metro Center) gets a little rider on every
+// map -- the ride lives on the server (/api/ride), so the wall shows it too.
 const CARD_REFRESH_MS = 15000;
 let card = null;   // {legs, load: async () => html, html, trips} while open
-let ride = null;   // see ridePlan
-try { ride = JSON.parse(localStorage.getItem("ride")); } catch { /* none */ }
-const riding = () => rideTrip(ride, Date.now());
+let ride = null;   // the server's current ride, refreshed with each card
+async function rideApi(method = "GET", body) {
+  try {
+    const r = await fetch("/api/ride", { method, cache: "no-store", signal: AbortSignal.timeout(8000),
+      headers: body ? { "Content-Type": "application/json" } : {}, body: body && JSON.stringify(body) });
+    if (r.ok) ride = (await r.json()).ride;
+  } catch { /* keep what we had */ }
+}
 async function fetchTrip(id) {
   try {
     const r = await fetch(`/api/trip/${encodeURIComponent(id)}${tripQuery()}`,
@@ -106,7 +112,7 @@ async function fetchTrip(id) {
 }
 function rideButton() {
   if (!card?.legs.length) return "";
-  const on = riding() !== null && ride.trips.join() === card.legs.map(l => l.trip).join();
+  const on = !!ride && ride.trips.join() === card.legs.map(l => l.trip).join();
   return `<button class="tride${on ? " on" : ""}">${on ? "🙋 Riding along · hop off" : "🙋 I'm on this one"}</button>`;
 }
 function showCard(html) {
@@ -114,17 +120,17 @@ function showCard(html) {
   $("card").innerHTML = `<button class="tclose" aria-label="Close">✕</button>${html}${rideButton()}`;
   $("card").hidden = false;
 }
-function toggleRide() {
-  const on = $("card").querySelector(".tride.on");
-  ride = on ? null : ridePlan(card.legs, card.trips || [], Date.now());
-  try { localStorage.setItem("ride", JSON.stringify(ride)); } catch { /* this page only */ }
-  showCard(card.html);
+async function toggleRide() {
+  const shown = card, on = $("card").querySelector(".tride.on");
+  if (on) await rideApi("DELETE");
+  else await rideApi("PUT", ridePlan(shown.legs, shown.trips || [], Date.now() / 1000));
+  if (card === shown) showCard(shown.html);
 }
 async function openCard(next) {
   card = next;
   showCard(next.loading);
   while (card === next) {
-    const html = await next.load();
+    const [html] = await Promise.all([next.load(), rideApi()]);
     if (card !== next) return;
     showCard(html);
     await new Promise(res => setTimeout(res, CARD_REFRESH_MS));
@@ -224,7 +230,7 @@ const fitPadding = () => ({
 let recenter = null;
 $("recenter").addEventListener("click", () => recenter?.());
 function startMap() {
-  createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding, rider: riding })
+  createMap($("map"), { interactive: true, fit: "contain", padding: fitPadding })
     .then(m => {
       recenter = () => m.recenter();
       // Allow zooming out to the whole system, but not off into the void.

@@ -257,9 +257,12 @@ in chat (no separate spec/plan):
 - Fixtures mode shifts the recorded trip updates to now (like positions); the
   timetable isn't shifted, so "min late" is meaningless there.
 - Easter egg: a card for a known train has "🙋 I'm on this one". That trip
-  gets a little waving rider on the phone map (a commute row: the first train
-  until it reaches Metro Center, then the second), until 2 min after the last
-  leg arrives (3 h for a map train). Kept in the phone's localStorage.
+  gets a little waving blonde woman on every map, wall and phones (a commute
+  row: the first train until it reaches Metro Center, then the second), until
+  2 min after the last leg arrives (3 h for a map train). The phone sends
+  `PUT /api/ride {trips, switch_at, until}` (epoch s; `DELETE` hops off); the
+  server keeps it in `data/ride.json` and names the trip as `ride` in
+  `/api/positions`.
 
 ## Out of scope (for now)
 
