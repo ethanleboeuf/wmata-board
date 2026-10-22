@@ -96,7 +96,25 @@ test("station picker: search, nearest, rows", async () => {
   assert.deepEqual(matchStations(st, " metro ").map(s => s.name), ["Metro Center"]);
   assert.equal(nearestStation(st, -77.03, 38.90).name, "Metro Center");
   const html = stationRowsHtml(st, "C01");
-  assert.match(html, /<button class="prow" data-code="K01">Court House<\/button>/);
-  assert.match(html, /<button class="prow on" data-code="A01">Metro Center<\/button>/);
+  assert.match(html, /<div class="prow"><button class="pname" data-code="K01">Court House<\/button><button class="pstar" data-fav="K01"[^>]*>☆/);
+  assert.match(html, /<div class="prow on"><button class="pname" data-code="A01">Metro Center<\/button>/);
   assert.match(stationRowsHtml([], "K01"), /No matching station/);
+});
+
+test("station search forgives punctuation, abbreviations and nicknames", async () => {
+  const { matchStations, pickerListHtml } = await import("../../web/render.js");
+  const st = ["L'Enfant Plaza", "Gallery Place", "King St-Old Town", "Foggy Bottom-GWU", "Federal Triangle",
+              "Federal Center SW", "Ronald Reagan Washington National Airport", "Court House"]
+    .map((name, i) => ({ codes: [`X${String(i).padStart(2, "0")}`], name }));
+  const names = q => matchStations(st, q).map(s => s.name);
+  for (const q of ["lenfant", "L’Enfant", "l enfant", "LENF", "enfant", "plaza"]) assert.deepEqual(names(q), ["L'Enfant Plaza"], q);
+  assert.deepEqual(names("chinatown"), ["Gallery Place"]);
+  assert.deepEqual(names("king street"), ["King St-Old Town"]);
+  assert.deepEqual(names("gwu"), ["Foggy Bottom-GWU"]);
+  assert.deepEqual(names("dca"), ["Ronald Reagan Washington National Airport"]);
+  assert.deepEqual(names("fed"), ["Federal Center SW", "Federal Triangle"]);
+  assert.deepEqual(names("zzz"), []);
+  const html = pickerListHtml(st, "", "X07", ["X07", "X00"]);
+  assert.match(html, /^<div class="phead">Favorites<\/div><div class="prow on">.*Court House.*★.*L&#39;Enfant Plaza.*All stations/s);
+  assert.doesNotMatch(pickerListHtml(st, "len", "X07", ["X07"]), /Favorites/);
 });

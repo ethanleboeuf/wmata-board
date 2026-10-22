@@ -88,7 +88,11 @@ body.phone * { box-sizing: border-box; }
 .picker .tnone { margin: 8px 0 0; }
 .picker .tnone:empty { display: none; }
 .plist { overflow-y: auto; margin-top: 6px; }
-.prow { display: block; width: 100%; min-height: 44px; padding: 10px 4px; text-align: left; background: none; border: 0;
-        border-bottom: 1px solid #1c222b; color: #e6ebf1; font: 600 16px Inter, Helvetica, Arial, sans-serif; }
-.prow.on { color: #f7c3cc; font-weight: 800; }
-.prow:active { background: #151e29; }
+.prow { display: flex; align-items: stretch; border-bottom: 1px solid #1c222b; }
+.prow .pname { flex: 1; min-height: 44px; padding: 10px 4px; text-align: left; background: none; border: 0;
+               color: #e6ebf1; font: 600 16px Inter, Helvetica, Arial, sans-serif; }
+.prow.on .pname { color: #f7c3cc; font-weight: 800; }
+.prow .pname:active { background: #151e29; }
+.prow .pstar { width: 48px; background: none; border: 0; color: #5b6573; font-size: 22px; line-height: 1; }
+.prow .pstar.fav { color: #f3d36b; }
+.phead { margin: 10px 4px 2px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #8b95a3; }

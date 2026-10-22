@@ -7,7 +7,7 @@ later milestones). It runs on the Raspberry Pi as a systemd user unit on
 
 - Wall: kiosk-selector target `metro` (https://raspberrypi.tail7b0b4d.ts.net:8445)
 - Phone: https://raspberrypi.tail7b0b4d.ts.net:8446/phone. Tap the station name
-  to see arrivals at any station (search, or 📍 Nearest); it starts on Court
+  to see arrivals at any station (search, ☆ favorites, or 📍 Nearest); it starts on Court
   House each time it opens. The wall always shows Court House.
 
 ## Local development

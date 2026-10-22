@@ -3,7 +3,7 @@
 // on the map or a commute row opens a trip card.
 import { formatClock, pillState, arrivalsExpired, mergeAlerts, ridePlan, escapeHtml } from "./format.js";
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteModeHtml, trainCardHtml,
-         commuteCardHtml, matchStations, nearestStation, stationRowsHtml } from "./render.js";
+         commuteCardHtml, nearestStation, pickerListHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute, tripQuery } from "./commute.js";
 
@@ -182,6 +182,11 @@ function openCommuteRow(i) {
 
 // ---- station picker: tap the station name ----
 let stations = null, home = "K01";   // from /api/network (home: the wall's station), loaded on first open
+// Favorite stations (first codes, in the order starred), remembered on this phone.
+function favorites() {
+  try { const f = JSON.parse(stored("favStations", "[]")); return Array.isArray(f) ? f.filter(c => typeof c === "string") : []; }
+  catch { return []; }
+}
 async function loadStations() {
   if (!stations) {
     try {
@@ -202,7 +207,7 @@ function renderPicker(note = "") {
       `<div id="pnote" class="tnone"></div><div id="plist" class="plist"></div>`;
   }
   $("pnote").textContent = note;
-  $("plist").innerHTML = stations ? stationRowsHtml(matchStations(stations, query), current)
+  $("plist").innerHTML = stations ? pickerListHtml(stations, query, current, favorites())
                                   : `<div class="tnone">Stations unavailable</div>`;
 }
 async function openPicker() {
@@ -233,7 +238,13 @@ $("picker").addEventListener("input", () => renderPicker());
 $("picker").addEventListener("click", async ev => {
   if (ev.target.closest(".tclose")) closePicker();
   else if (ev.target.closest("[data-home]")) chooseStation(null);
-  else if (ev.target.closest("[data-code]")) {
+  else if (ev.target.closest("[data-fav]")) {
+    const code = ev.target.closest("[data-fav]").dataset.fav, favs = favorites();
+    store("favStations", JSON.stringify(favs.includes(code) ? favs.filter(c => c !== code) : [...favs, code]));
+    const list = $("plist"), top = list.scrollTop;
+    renderPicker();
+    list.scrollTop = top;
+  } else if (ev.target.closest("[data-code]")) {
     const code = ev.target.closest("[data-code]").dataset.code;
     chooseStation(stations.find(s => s.codes.includes(code)));
   } else if (ev.target.closest("[data-near]")) {

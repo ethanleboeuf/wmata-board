@@ -180,11 +180,41 @@ export function commuteCardHtml(row, kind, trips, stationName = "Takoma") {
 
 // ---- station picker (phone) ------------------------------------------------
 
-// Stations whose name matches `query` (case-insensitive), alphabetical.
+// Lowercase words with accents and punctuation gone: "L'Enfant" and a phone's
+// curly "L’enfant" both become "lenfant"; "Foggy Bottom-GWU" is three words.
+const searchWords = text => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/['\u2018\u2019`.]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
+
+// Spelled-out words for WMATA's abbreviated names, and the other names people use.
+const EXPAND = { st: "street", av: "avenue", sq: "square", rd: "road", mt: "mount", u: "university" };
+const ALIASES = {
+  "Gallery Place": "chinatown", "Navy Yard-Ballpark": "nationals park", "Stadium-Armory": "rfk",
+  "Ronald Reagan Washington National Airport": "dca national airport",
+  "Washington Dulles International Airport": "iad dulles", "Smithsonian": "mall",
+  "Hyattsville Crossing": "prince georges plaza", "Federal Center SW": "southwest",
+};
+function stationWords(name) {
+  const words = searchWords(name);
+  return [...words, ...words.map(w => EXPAND[w]).filter(Boolean), ...searchWords(ALIASES[name] ?? "")];
+}
+
+// Stations matching `query`: every word typed starts a word of the name (or an
+// alias), or the whole query, spaces and punctuation ignored, is inside the
+// name ("lenf", "l enfant", "gallery", "chinatown", "king street"). Names that
+// start with it first, then the rest; alphabetical within each.
 export function matchStations(stations, query) {
-  const q = query.trim().toLowerCase();
-  return stations.filter(s => !q || s.name.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const q = searchWords(query);
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  if (!q.length) return [...stations].sort(byName);
+  const joined = q.join("");
+  const rank = s => {
+    const words = stationWords(s.name), flat = searchWords(s.name).join("");
+    if (flat.startsWith(joined)) return 0;
+    if (q.every(w => words.some(n => n.startsWith(w))) || flat.includes(joined)) return 1;
+    return -1;
+  };
+  return stations.map(s => [rank(s), s]).filter(([r]) => r >= 0)
+    .sort(([ra, a], [rb, b]) => ra - rb || byName(a, b)).map(([, s]) => s);
 }
 
 // The nearest station to lon/lat (an equirectangular distance is plenty here).
@@ -198,8 +228,23 @@ export function nearestStation(stations, lon, lat) {
   return best;
 }
 
-export function stationRowsHtml(stations, current) {
+// One row per station: its name (picks it) and a star (favorites it).
+// `favs`: the favorite stations' first codes.
+export function stationRowsHtml(stations, current, favs = []) {
   if (!stations.length) return `<div class="tnone">No matching station</div>`;
-  return stations.map(s => `<button class="prow${s.codes.includes(current) ? " on" : ""}" data-code="${escapeHtml(s.codes[0])}">` +
-    `${escapeHtml(s.name)}</button>`).join("");
+  return stations.map(s => {
+    const code = escapeHtml(s.codes[0]), fav = favs.includes(s.codes[0]);
+    return `<div class="prow${s.codes.includes(current) ? " on" : ""}">` +
+      `<button class="pname" data-code="${code}">${escapeHtml(s.name)}</button>` +
+      `<button class="pstar${fav ? " fav" : ""}" data-fav="${code}" aria-label="${fav ? "Unfavorite" : "Favorite"}">${fav ? "★" : "☆"}</button></div>`;
+  }).join("");
+}
+
+// The picker's list: favorites first (when not searching), then every match.
+export function pickerListHtml(stations, query, current, favs = []) {
+  const found = matchStations(stations, query);
+  const favorites = favs.map(c => stations.find(s => s.codes[0] === c)).filter(Boolean);
+  if (query.trim() || !favorites.length) return stationRowsHtml(found, current, favs);
+  return `<div class="phead">Favorites</div>${stationRowsHtml(favorites, current, favs)}` +
+    `<div class="phead">All stations</div>${stationRowsHtml(found, current, favs)}`;
 }
