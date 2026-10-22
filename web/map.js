@@ -40,7 +40,7 @@ const RIDER = `<g transform="scale(2.4) translate(-1.2,4.2)"><g class="bob">` +
   `<path class="band" d="M-3.95,-27.6 L3.95,-27.6"/>` +
   `<path class="cap" d="M-4.3,-26.6 L3.6,-26.6 Q6,-26.5 6.6,-25.4 L-4.3,-25.6 Z"/>` +
   `<circle class="badge" cx="0" cy="-28.7" r=".6"/>` +
-  `</g><g class="rat" transform="translate(-1.6,1)">` +
+  `</g><g class="rat" transform="translate(-0.4,1) translate(6,-8) scale(1.5) translate(-6,8)">` +
   `<path class="tail" d="M3.6,-9.4 Q1.6,-7.6 3.2,-6.2 Q4.6,-5.2 3.6,-4"/>` +
   `<ellipse class="fur" cx="6" cy="-9.6" rx="2.9" ry="1.9"/>` +
   `<circle class="fur" cx="8.6" cy="-10.6" r="1.6"/>` +
