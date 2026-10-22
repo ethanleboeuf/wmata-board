@@ -70,10 +70,19 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .rider .face { fill: #f6d2b8; }
 .overlay .rider .skin { fill: none; stroke: #f6d2b8; stroke-width: 1.9; }
 .overlay .rider .dress { fill: #f7a8c0; }
+.overlay .rider .cap { fill: #23345a; }
+.overlay .rider .badge { fill: #f3d36b; }
+.overlay .rider .band { fill: none; stroke: #f3d36b; stroke-width: .5; }
+.overlay .rider .smile { fill: none; stroke: #b5524f; stroke-width: .45; }
+.overlay .rider .fur { fill: #a7afb9; }
+.overlay .rider .ear { fill: #f2a7b5; }
+.overlay .rider .eye { fill: #111; }
+.overlay .rider .tail { fill: none; stroke: #f2a7b5; stroke-width: .9; transform-box: fill-box; transform-origin: 100% 0; animation: rider-wave 1.1s ease-in-out infinite alternate; }
 .overlay .rider .bob { animation: rider-bob .5s ease-in-out infinite alternate; }
-.overlay .rider .wave { transform-origin: 2px -18.6px; animation: rider-wave .4s ease-in-out infinite alternate; }
+.overlay .rider .wave { transform-box: fill-box; transform-origin: 0 100%; animation: rider-arm .4s ease-in-out infinite alternate; }
 @keyframes rider-bob { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 @keyframes rider-wave { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+@keyframes rider-arm { from { transform: rotate(0deg); } to { transform: rotate(35deg); } }
 .pulse { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 3px solid #fff;
          border-radius: 50%; animation: pulse 2.4s ease-out infinite; pointer-events: none; }
 @keyframes pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }

@@ -26,15 +26,27 @@ const LABEL_HINTS = {
   F05: [14, 22, "start", "Navy Yard"], B05: [-16, 5, "end", "Brookland"],
 };
 
-// A little blonde woman in a pink dress sitting on the badge, one arm waving
-// (styled in board.css).
-const RIDER = `<g transform="scale(1.6) translate(0,3)"><g class="bob">` +
+// A little blonde woman in a pink dress and a conductor's cap sitting on the
+// badge, one arm waving, with her pet rat beside her (styled in board.css).
+const RIDER = `<g transform="scale(1.6) translate(-1.2,3)"><g class="bob">` +
   `<path class="hair" d="M-5.4,-26 C-5.6,-20 -6.4,-17.5 -4.2,-16.4 L4.2,-16.4 C6.4,-17.5 5.6,-20 5.4,-26 A5.4,5.6 0 0 0 -5.4,-26 Z"/>` +
   `<path class="skin" d="M-2.6,-12 L-3.2,-8.6 M2.6,-12 L3.2,-8.6 M-2,-18.6 L-6.2,-14.4"/>` +
   `<path class="wave skin" d="M2,-18.6 L6.6,-23.4"/>` +
   `<path class="dress" d="M0,-19.6 L-5,-11.2 L5,-11.2 Z"/>` +
   `<circle class="face" cx="0" cy="-24.6" r="3.6"/>` +
-  `<path class="hair" d="M-3.8,-25.2 C-3.4,-29.4 3.4,-29.4 3.8,-25.2 C1.8,-27 -1.6,-27.2 -3.8,-25.2 Z"/>` +
+  `<circle class="eye" cx="-1.3" cy="-24.4" r=".42"/><circle class="eye" cx="1.3" cy="-24.4" r=".42"/>` +
+  `<path class="smile" d="M-1,-22.7 Q0,-21.9 1,-22.7"/>` +
+  `<path class="cap" d="M-3.9,-26.5 L-4.6,-29.4 Q0,-30.6 4.6,-29.4 L3.9,-26.5 Z"/>` +
+  `<path class="band" d="M-3.95,-27.6 L3.95,-27.6"/>` +
+  `<path class="cap" d="M-4.3,-26.6 L3.6,-26.6 Q6,-26.5 6.6,-25.4 L-4.3,-25.6 Z"/>` +
+  `<circle class="badge" cx="0" cy="-28.7" r=".6"/>` +
+  `</g><g class="rat">` +
+  `<path class="tail" d="M3.6,-9.4 Q1.6,-7.6 3.2,-6.2 Q4.6,-5.2 3.6,-4"/>` +
+  `<ellipse class="fur" cx="6" cy="-9.6" rx="2.9" ry="1.9"/>` +
+  `<circle class="fur" cx="8.6" cy="-10.6" r="1.6"/>` +
+  `<circle class="ear" cx="7.9" cy="-12.1" r=".85"/>` +
+  `<circle class="ear" cx="10.1" cy="-10.4" r=".45"/>` +
+  `<circle class="eye" cx="8.9" cy="-11" r=".38"/>` +
   `</g></g>`;
 
 const svgEl = (tag, attrs = {}) => {
