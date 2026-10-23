@@ -36,6 +36,7 @@ LIVE_STALE_AFTER_S = 120.0
 INCIDENTS_EXPIRE_AFTER_S = 900.0   # as on the board: an incident feed this old is dropped
 EARLIER_SLOTS = 2          # morning rows start two shuttles before the first target
 NOTICE_UNAVAILABLE = "Commute times unavailable"
+RIDE_GRACE_MIN = 120       # a one-train ride keeps the panel up this long past its window
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +126,13 @@ def _am_row(first: Leg, second: Leg, cfg: CommuteConfig, tz: ZoneInfo) -> dict:
         "target": _of_day(shuttle, tz) in cfg.shuttles,
         "live": first.live and second.live, "legs": [first.as_json(), second.as_json()],
     }
+
+
+def _soon_after(cfg: CommuteConfig, mode: str, now_local: datetime) -> bool:
+    """A weekday, within RIDE_GRACE_MIN after `mode`'s window opened and closed."""
+    start, end = cfg.morning if mode == AM else cfg.evening
+    m = now_local.hour * 60 + now_local.minute
+    return now_local.weekday() < 5 and start <= m < end + RIDE_GRACE_MIN
 
 
 def plan_morning(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo) -> list[dict]:
@@ -220,14 +228,16 @@ class RideMemory:
     ride: tuple[str, ...] = ()
     trips: dict[str, Trip] = field(default_factory=dict)
     rows: dict[str, dict] = field(default_factory=dict)
+    partners: set[str] = field(default_factory=set)   # trains paired with a one-train ride
 
     def track(self, ride: tuple[str, ...], trips: Iterable[Trip]) -> None:
         """Live times only (the timetable is always there to fall back on). The
         newest win; a stop the feed no longer lists (passed) is kept."""
         if ride != self.ride:
-            self.ride, self.trips, self.rows = ride, {}, {}
+            self.ride, self.trips, self.rows, self.partners = ride, {}, {}, set()
+        wanted = set(ride) | self.partners
         for t in trips:
-            if t.id not in ride or not t.live:
+            if t.id not in wanted or not t.live:
                 continue
             old = self.trips.get(t.id)
             if old is not None:
@@ -262,29 +272,46 @@ def _prev_slot(t: float, every_min: int, tz: ZoneInfo) -> float:
     return base + math.floor((t - base) / step + 1e-9) * step
 
 
+def _pair(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], a: tuple[str, str], b: tuple[str, str],
+          walk_s: float) -> tuple[Leg, Leg] | None:
+    """The ride's two legs, a then b (each (from, to)), with a transfer walk
+    between. A one-train ride (a train tapped on the map) is either leg; the
+    other is the one the planner would pair it with: the first train on after
+    it, or the last that got her there before it."""
+    if len(ride) == 2:
+        first, second = _leg_of(sources, ride[0], *a), _leg_of(sources, ride[1], *b)
+        return (first, second) if first and second else None
+    if len(ride) != 1:
+        return None
+    ids = {tid for src in sources for tid in src}
+    if (first := _leg_of(sources, ride[0], *a)) is not None:
+        nexts = [x for tid in ids if (x := _leg_of(sources, tid, *b)) and x.depart >= first.arrive + walk_s]
+        second = min(nexts, key=lambda x: (x.depart, x.arrive), default=None)
+        return (first, second) if second else None
+    if (second := _leg_of(sources, ride[0], *b)) is not None:
+        befores = [x for tid in ids if (x := _leg_of(sources, tid, *a)) and x.arrive + walk_s <= second.depart]
+        first = max(befores, key=lambda x: (x.arrive, x.depart), default=None)
+        return (first, second) if first else None
+    return None
+
+
 def ride_rows(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], cfg: CommuteConfig,
               tz: ZoneInfo) -> dict[str, dict]:
     """The ride's row for each list it fits, by kind: "am" (hospital),
-    "am-station", "pm" (hospital), "pm-station". A one-train ride (a train
-    tapped on the map) fits none."""
-    if len(ride) != 2:
-        return {}
+    "am-station", "pm" (hospital), "pm-station"."""
     orsv, red = cfg.transfer
-    t1, t2 = ride
+    walk = cfg.transfer_walk * 60
     out = {}
-    first = _leg_of(sources, t1, cfg.home, orsv)
-    if first is not None:
-        if (second := _leg_of(sources, t2, red, cfg.shuttle_stop)) is not None:
-            out["am"] = _am_row(first, second, cfg, tz)
-        if (second := _leg_of(sources, t2, red, cfg.evening_from)) is not None:
-            out["am-station"] = _to_station_row(first, second, tz)
-    second = _leg_of(sources, t2, orsv, cfg.home)
-    if second is not None:
-        if (first := _leg_of(sources, t1, cfg.shuttle_stop, red)) is not None:
-            shuttle = _prev_slot(first.depart - (cfg.shuttle_ride + cfg.shuttle_walk) * 60, cfg.shuttle_every, tz)
-            out["pm"] = _hospital_row(shuttle, first, second, cfg, tz)
-        if (first := _leg_of(sources, t1, cfg.evening_from, red)) is not None:
-            out["pm-station"] = _home_row(first, second, tz)
+    if pair := _pair(ride, sources, (cfg.home, orsv), (red, cfg.shuttle_stop), walk):
+        out["am"] = _am_row(*pair, cfg, tz)
+    if pair := _pair(ride, sources, (cfg.home, orsv), (red, cfg.evening_from), walk):
+        out["am-station"] = _to_station_row(*pair, tz)
+    if pair := _pair(ride, sources, (cfg.shuttle_stop, red), (orsv, cfg.home), walk):
+        first = pair[0]
+        shuttle = _prev_slot(first.depart - (cfg.shuttle_ride + cfg.shuttle_walk) * 60, cfg.shuttle_every, tz)
+        out["pm"] = _hospital_row(shuttle, *pair, cfg, tz)
+    if pair := _pair(ride, sources, (cfg.evening_from, red), (orsv, cfg.home), walk):
+        out["pm-station"] = _home_row(*pair, tz)
     return out
 
 
@@ -296,7 +323,8 @@ def _pin(rows: list[dict], kind: str, ride: tuple[str, ...], built: dict[str, di
          memory: RideMemory, limit: int) -> list[dict]:
     """Her row first, marked riding: as planned while it is still listed, else
     rebuilt from its trains (keeping the shuttle she was planned onto)."""
-    row = next((r for r in rows if _trips_of(r) == ride), None)
+    trips = _trips_of(built[kind]) if kind in built else ride
+    row = next((r for r in rows if _trips_of(r) == trips), None)
     if row is not None:
         memory.rows[kind] = row
     elif kind in built:
@@ -306,7 +334,7 @@ def _pin(rows: list[dict], kind: str, ride: tuple[str, ...], built: dict[str, di
             row = {**row, "shuttle": planned["shuttle"], "brookland": planned["brookland"]}
     else:
         return rows
-    return ([{**row, "riding": True}] + [r for r in rows if _trips_of(r) != ride])[:limit]
+    return ([{**row, "riding": True}] + [r for r in rows if _trips_of(r) != trips])[:limit]
 
 
 def live_updates(state: FeedState, now_mono: float, wall_now: float) -> TripUpdates | None:
@@ -337,8 +365,8 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
                   memory: RideMemory | None = None) -> dict:
     """`now` is the planning time (epoch); `wall_now` the real time, which differs
     only when a debug `at=` is given. `mode` overrides the time-of-day window.
-    `ride`: the trips she's on. Their row is pinned to the top, and keeps the
-    panel up past the end of its window."""
+    `ride`: the trips she's on. Their row is pinned to the top; a commute row's
+    two trains also keep the panel up past the end of its window."""
     now_local = datetime.fromtimestamp(now, tz)
     mode = mode or commute_mode(cfg, now_local)
     body = {"mode": mode, "name": cfg.name, "wall_platform": cfg.wall_platform,
@@ -355,8 +383,11 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
         sources = [{t.id: t for t in trips if t.live}, memory.trips, {t.id: t for t in trips},
                    {t.id: t for t, _ in sched}]
         built = ride_rows(ride, sources, cfg, tz)
+        memory.partners |= {tid for r in built.values() for tid in _trips_of(r)} - set(ride)
         if mode is None:
             mode = AM if any(k.startswith(AM) for k in built) else PM if built else None
+            if mode and len(ride) == 1 and not _soon_after(cfg, mode, now_local):
+                mode = None   # a train off the map: not a commute on a Saturday
             body["mode"] = mode
             if mode is None:
                 return body

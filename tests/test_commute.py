@@ -268,10 +268,37 @@ def test_evening_ride_keeps_the_shuttle_she_was_planned_onto():
     assert (pinned["shuttle"], pinned["brookland"], pinned["red_leave"], pinned["home"]) == ("5:06", "5:16", "5:19", "5:43")
 
 
-def test_a_one_train_ride_pins_nothing():
-    body = build(at("7:30"), schedule=schedule_of(MORNING), ride=("sv748",), memory=RideMemory())
+def test_a_red_train_off_the_map_pins_the_row_it_ends():
+    # On r801 (tapped on the map): the last Orange/Silver that made it was sv748 (7:59 + 2 min walk)
+    rows = build(at("8:05"), schedule=schedule_of(MORNING), ride=("r801",), memory=RideMemory())["am"]["rows"]
+    assert (rows[0]["leave"], rows[0]["red_leave"], rows[0]["shuttle"], rows[0]["riding"]) == ("7:48", "8:01", "8:18", True)
+    assert [l["trip"] for l in rows[0]["legs"]] == ["sv748", "r801"]
+    assert not any(r.get("riding") for r in rows[1:])
+
+
+def test_an_orange_silver_train_off_the_map_pins_the_row_it_starts():
+    rows = build(at("7:30"), schedule=schedule_of(MORNING), ride=("or745",), memory=RideMemory())["am"]["rows"]
+    assert (rows[0]["leave"], rows[0]["red_leave"], rows[0]["riding"]) == ("7:45", "8:01", True)
+    assert sum(bool(r.get("riding")) for r in rows) == 1
+
+
+def test_an_evening_red_train_off_the_map():
+    hospital = build(at("17:20"), schedule=schedule_of(EVENING), ride=("r525",), memory=RideMemory())["pm"]["hospital"]
+    assert (hospital[0]["red_leave"], hospital[0]["line"], hospital[0]["home"], hospital[0]["riding"]) == (
+        "5:25", "SV", "5:50", True)
+
+
+def test_a_one_train_ride_keeps_the_panel_only_a_while_on_weekdays():
+    sched = schedule_of(MORNING)
+    assert build(at("10:00"), schedule=sched, ride=("r801",))["am"]["rows"][0]["riding"]
+    assert build(at("10:30"), schedule=sched, ride=("r801",))["mode"] is None
+
+
+def test_a_train_that_fits_no_commute_pins_nothing():
+    stray = trip("gr1", "GR", ("E01", "7:40"), ("F01", "7:50"))
+    body = build(at("7:30"), schedule=schedule_of(MORNING + [stray]), ride=("gr1",), memory=RideMemory())
     assert not any(r.get("riding") for r in body["am"]["rows"])
-    assert build(at("12:00"), schedule=schedule_of(MORNING), ride=("sv748",))["mode"] is None
+    assert build(at("12:00"), schedule=schedule_of(MORNING + [stray]), ride=("gr1",))["mode"] is None
 
 
 # ---- alerts -----------------------------------------------------------------------
