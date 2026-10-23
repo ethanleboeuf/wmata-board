@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, build_commute, commute_mode, departures,
+from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, RideMemory, build_commute, commute_mode, departures,
                                  next_slot, plan_from_hospital, plan_from_station, plan_morning,
                                  plan_to_station)
 from wmata_board.config import CommuteConfig
@@ -174,10 +174,10 @@ def schedule_of(trips, start_s=86399):
                       for t in trips]}
 
 
-def build(now, *, schedule=None, updates=None, updates_age=10.0, mode=None):
+def build(now, *, schedule=None, updates=None, updates_age=10.0, mode=None, ride=None, memory=None):
     return build_commute(CFG, schedule=FeedState(value=schedule),
                          updates=FeedState(value=updates, fetched_at=100.0 - updates_age if updates else None),
-                         tz=ET, now=now, now_mono=100.0, wall_now=now, mode=mode)
+                         tz=ET, now=now, now_mono=100.0, wall_now=now, mode=mode, ride=ride, memory=memory)
 
 
 def test_outside_the_windows_there_is_no_panel():
@@ -223,6 +223,55 @@ def test_evening_payload_has_both_starts():
 def test_mode_override_and_nothing_to_plan_with():
     body = build(at("12:00"), mode=AM)
     assert body["mode"] == AM and body["notice"] == NOTICE_UNAVAILABLE and "am" not in body
+
+
+# ---- the ride she's on ------------------------------------------------------------
+
+def live(tid, line, *calls):
+    return LiveTrip(tid, line, False, tuple((c, at(t), at(t)) for c, t in calls), frozenset())
+
+
+def test_ride_row_is_pinned_first_while_listed():
+    body = build(at("7:30"), schedule=schedule_of(MORNING), ride=("sv748", "r801"), memory=RideMemory())
+    rows = body["am"]["rows"]
+    assert [(r["leave"], r.get("riding", False)) for r in rows] == [("7:48", True), ("7:38", False), ("7:45", False)]
+    assert body["am"]["station"][0]["leave"] == "7:48" and body["am"]["station"][0]["riding"]
+
+
+def test_ride_row_stays_after_its_trains_leave_with_the_times_last_seen():
+    memory, ride, sched = RideMemory(), ("sv738", "r751"), schedule_of(MORNING)
+    early = TripUpdates(int(at("7:30")), {"sv738": live("sv738", "SV", ("K01", "7:38:40"), ("C01", "7:48:50")),
+                                          "r751": live("r751", "RD", ("A01", "7:51"), ("B05", "8:03"))})
+    assert build(at("7:30"), schedule=sched, updates=early, ride=ride, memory=memory)["am"]["rows"][0]["riding"]
+    # 7:56: sv738 has left the feed, r751 is past Metro Center and a minute late to Brookland
+    later = TripUpdates(int(at("7:56")), {"r751": live("r751", "RD", ("B05", "8:04"), ("B07", "8:20"))})
+    rows = build(at("7:56"), schedule=sched, updates=later, ride=ride, memory=memory)["am"]["rows"]
+    pinned = rows[0]
+    assert pinned["riding"] and pinned["live"]
+    assert (pinned["leave"], pinned["mc_arrive"], pinned["red_leave"], pinned["brookland"], pinned["shuttle"]) == (
+        "7:38", "7:48", "7:51", "8:04", "8:12")
+    assert len(rows) <= CFG.rows
+
+
+def test_ride_keeps_the_panel_up_past_its_window():
+    body = build(at("8:15"), schedule=schedule_of(MORNING), ride=("sv748", "r801"), memory=RideMemory())
+    assert body["mode"] == AM
+    assert body["am"]["rows"][0]["leave"] == "7:48" and body["am"]["rows"][0]["riding"]
+    assert build(at("8:15"), schedule=schedule_of(MORNING))["mode"] is None
+
+
+def test_evening_ride_keeps_the_shuttle_she_was_planned_onto():
+    memory, ride = RideMemory(), ("r519", "o533")
+    first = build(at("17:01"), schedule=schedule_of(EVENING), ride=ride, memory=memory)["pm"]["hospital"][0]
+    assert (first["shuttle"], first["riding"]) == ("5:06", True)
+    pinned = build(at("17:35"), schedule=schedule_of(EVENING), ride=ride, memory=memory)["pm"]["hospital"][0]
+    assert (pinned["shuttle"], pinned["brookland"], pinned["red_leave"], pinned["home"]) == ("5:06", "5:16", "5:19", "5:43")
+
+
+def test_a_one_train_ride_pins_nothing():
+    body = build(at("7:30"), schedule=schedule_of(MORNING), ride=("sv748",), memory=RideMemory())
+    assert not any(r.get("riding") for r in body["am"]["rows"])
+    assert build(at("12:00"), schedule=schedule_of(MORNING), ride=("sv748",))["mode"] is None
 
 
 # ---- alerts -----------------------------------------------------------------------

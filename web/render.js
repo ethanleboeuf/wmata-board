@@ -39,6 +39,9 @@ export function alertHtml(alert) {
 
 const wait = m => `<span class="cw ${waitClass(m)}">${m}<small>min</small></span>`;
 const sched = live => live ? "" : `<span class="sched">sched</span>`;
+// The row she is on (pinned to the top by the server) wears her 🙋 in the sched slot.
+const riding = r => r.riding ? " riding" : "";
+const tag = r => r.riding ? `<span class="rtag" title="Riding">🙋</span>` : sched(r.live);
 const cnotice = text => `<div class="crow cempty">${escapeHtml(text)}</div>`;
 
 function cbody(c, rows, head, row, empty) {
@@ -49,16 +52,16 @@ function cbody(c, rows, head, row, empty) {
 
 // data-i: the phone opens a row's trip card by index.
 function amRow(r, i) {
-  const cls = r.target ? " target" : "";
+  const cls = (r.target ? " target" : "") + riding(r);
   return `<div data-i="${i}" class="crow am${cls}">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>${wait(r.mc_wait)}` +
     `<span class="ct dim">${escapeHtml(r.brookland)}</span>` +
-    `<span class="cs">${escapeHtml(r.shuttle)}<small>+${r.spare}</small></span>${sched(r.live)}</div>`;
+    `<span class="cs">${escapeHtml(r.shuttle)}<small>+${r.spare}</small></span>${tag(r)}</div>`;
 }
 
 function amStationRow(r, i) {
-  return `<div data-i="${i}" class="crow am station">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>` +
+  return `<div data-i="${i}" class="crow am station${riding(r)}">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>` +
     `${wait(r.mc_wait)}<span class="ct dim">${escapeHtml(r.red_leave)}</span>` +
-    `<span class="ct">${escapeHtml(r.arrive)}</span>${sched(r.live)}</div>`;
+    `<span class="ct">${escapeHtml(r.arrive)}</span>${tag(r)}</div>`;
 }
 
 // Hospital/station switch: `attr` is data-dest (morning) or data-origin (evening).
@@ -92,7 +95,7 @@ export function commuteModeHtml(mode) {
 }
 
 function homeTail(r) {
-  return `${wait(r.mc_wait)}${chip(r.line)}<span class="ct">${escapeHtml(r.home)}</span>${sched(r.live)}`;
+  return `${wait(r.mc_wait)}${chip(r.line)}<span class="ct">${escapeHtml(r.home)}</span>${tag(r)}`;
 }
 
 export function commutePmHtml(c, origin) {
@@ -102,8 +105,8 @@ export function commutePmHtml(c, origin) {
     ? `<div class="crow pm station chead"><span>Red</span><span>Metro Ctr wait</span><span></span><span>Home</span><span></span></div>`
     : `<div class="crow pm chead"><span>Shuttle</span><span>Red</span><span>Metro Ctr wait</span><span></span><span>Home</span><span></span></div>`;
   const row = fromStation
-    ? (r, i) => `<div data-i="${i}" class="crow pm station"><span class="ct">${escapeHtml(r.red_leave)}</span>${homeTail(r)}</div>`
-    : (r, i) => `<div data-i="${i}" class="crow pm"><span class="ct">${escapeHtml(r.shuttle)}</span>` +
+    ? (r, i) => `<div data-i="${i}" class="crow pm station${riding(r)}"><span class="ct">${escapeHtml(r.red_leave)}</span>${homeTail(r)}</div>`
+    : (r, i) => `<div data-i="${i}" class="crow pm${riding(r)}"><span class="ct">${escapeHtml(r.shuttle)}</span>` +
         `<span class="ct dim">${escapeHtml(r.red_leave)}</span>${homeTail(r)}</div>`;
   return `<section class="commute"><h2>Home · from</h2>` +
     ctabs("origin", origin, "Hospital", pm.station_name) +

@@ -47,6 +47,8 @@ body.phone * { box-sizing: border-box; }
 .phone .ct, .phone .cw, .phone .cs { font-size: 17px; }
 .phone .cw small, .phone .cs small { font-size: 10px; margin-left: 2px; }
 .phone .sched { font-size: 8px; letter-spacing: .5px; padding: 1px 3px; border-width: 1px; border-radius: 4px; }
+.phone .crow.riding { box-shadow: inset 3px 0 0 #f7a8c0; }
+.phone .rtag { font-size: 18px; }
 .phone .ctabs { gap: 8px; margin: 2px 0 8px; }
 .phone .ctab { font-size: 13px; padding: 6px 14px; border-width: 1px; min-height: 32px; }
 

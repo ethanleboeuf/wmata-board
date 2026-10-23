@@ -20,12 +20,12 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .board import build_board
-from .commute import AM, PM, build_commute, commute_mode, live_updates
+from .commute import AM, PM, RideMemory, build_commute, commute_mode, live_updates
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
-from .ride import load_ride, parse_ride, ride_trip, save_ride
+from .ride import load_ride, parse_ride, ride_trip, ride_trips, save_ride
 from .state import FeedState
 from .tripinfo import station_names, trip_detail
 from .trips import scheduled_trips
@@ -101,6 +101,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     app.state.data_dir = data_dir
     ride_path = data_dir / "ride.json"
     app.state.ride = load_ride(ride_path)
+    ride_memory = RideMemory()   # the ride's passed stops, for its pinned commute row
 
     async def want(*names: str) -> None:
         """Mark feeds wanted; if one is due (about to fetch, or fetching now --
@@ -186,12 +187,14 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             return JSONResponse({"mode": None}, headers=NO_STORE)
         wall_now = wall_clock()
         now = preview_time(wall_now, at)
-        if mode or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
+        riding = None if at else ride_trips(app.state.ride, wall_now)
+        if mode or riding or commute_mode(cfg, datetime.fromtimestamp(now, tz)):
             await want(*(("incidents",) if at else ("trips", "incidents")))
         sched = feeds.get("schedule")
         body = build_commute(cfg, schedule=sched.state if sched else FeedState(),
                              updates=FeedState() if at else feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
-                             wall_now=wall_now, mode=mode, incidents=feeds["incidents"].state)
+                             wall_now=wall_now, mode=mode, incidents=feeds["incidents"].state,
+                             ride=riding, memory=ride_memory)
         return JSONResponse(body, headers=NO_STORE)
 
     def preview_time(wall_now: float, at: str | None) -> float:

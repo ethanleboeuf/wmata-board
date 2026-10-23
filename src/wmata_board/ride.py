@@ -51,6 +51,11 @@ def ride_trip(ride: Ride | None, now: float) -> str | None:
     return ride.trips[0]
 
 
+def ride_trips(ride: Ride | None, now: float) -> tuple[str, ...] | None:
+    """All the ride's trips while it lasts (the commute panel pins their row)."""
+    return None if ride is None or now >= ride.until else ride.trips
+
+
 def load_ride(path: Path) -> Ride | None:
     try:
         ride = json.loads(path.read_text(encoding="utf-8"))

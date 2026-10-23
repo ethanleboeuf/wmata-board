@@ -23,6 +23,15 @@ test("morning rows: leave, wait, Brookland, shuttle + spare", () => {
   assert.equal((html.match(/class="sched"/g) || []).length, 1);
 });
 
+test("the row she's riding is marked, with her in place of the sched tag", () => {
+  const html = commuteAmHtml(am([amRow({ riding: true, target: true, live: false }), amRow()]));
+  assert.match(html, /<div data-i="0" class="crow am target riding">.*?<span class="rtag" title="Riding">🙋<\/span><\/div>/);
+  assert.doesNotMatch(html, /class="sched"/);
+  assert.match(html, /<div data-i="1" class="crow am">/);
+  const evening = commutePmHtml({ ...pm, pm: { ...pm.pm, hospital: [{ ...pm.pm.hospital[0], riding: true }] } }, "hospital");
+  assert.match(evening, /class="crow pm riding">.*?🙋/);
+});
+
 test("morning notice and empty states", () => {
   assert.match(commuteAmHtml(am([], { notice: "Commute times unavailable" })), /Commute times unavailable/);
   assert.match(commuteAmHtml(am([])), /No connections found/);

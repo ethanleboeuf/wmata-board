@@ -133,6 +133,7 @@ async function toggleRide() {
   if (on) await rideApi("DELETE");
   else await rideApi("PUT", ridePlan(shown.legs, shown.trips || [], Date.now() / 1000));
   if (card === shown) showCard(shown.html);
+  commutePoller.poll();   // her row pins to the top (or unpins) now, not on the next poll
 }
 async function openCard(next) {
   card = next;
