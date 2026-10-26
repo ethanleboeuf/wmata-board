@@ -237,6 +237,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "labels": list(m.labels),
             "places": [{"name": p.name, "lat": p.lat, "lon": p.lon} for p in m.places],
             "landmarks": [{"name": x.name, "lat": x.lat, "lon": x.lon, "style": x.style} for x in m.landmarks],
+            "theme": m.theme,
         }, headers={"Cache-Control": "max-age=600"})
 
     @app.get("/healthz")

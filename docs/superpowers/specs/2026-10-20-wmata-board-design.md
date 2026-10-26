@@ -278,6 +278,23 @@ in chat (no separate spec/plan):
   browser's location, 🏠 Court House); the map flies to the pick. Not
   remembered: every launch starts at home. The wall never passes `station`.
 
+## Halloween theme (added 2026-10-25)
+
+- A manual switch, not date-based: `[map] theme = "halloween"` in
+  config.toml (`""` is the everyday map; anything else is a config error),
+  then restart. It reaches the browsers as `theme` on `/api/network`, so the
+  wall and the phone both change (allow up to `max-age=600` for a cached
+  page to pick it up).
+- `web/spooky.js` holds all of it; `map.js` only asks for its pieces when the
+  theme is on. Basemap retinted in JS (purple land, murky green water, dim
+  orange major roads with a faint glow) so there's no second style file.
+  An HTML layer under the SVG overlay holds a moon and 3 ghosts + 3 bats
+  drifting by CSS transform only (cheap on the Pi). A jack-o'-lantern sits
+  just above home (beside it, not on it: trains stopped at Court House would
+  hide it); a cobweb hangs on the hospital tile.
+- The rider becomes a witch: pointy purple hat with an orange band, black
+  dress, sitting on a broom; the rat gets a witch hat too.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by

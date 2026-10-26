@@ -65,6 +65,7 @@ class Landmark:
 
 
 _DEFAULT_BBOX = (-77.122, 38.844, -76.978, 38.966)
+THEMES = ("", "halloween")   # "" is the everyday Board-navy map
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +74,7 @@ class MapConfig:
     labels: tuple[str, ...] = ()
     places: tuple[Place, ...] = ()
     landmarks: tuple[Landmark, ...] = ()
+    theme: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,8 +213,12 @@ def _map(t: Mapping[str, Any]) -> MapConfig:
                                   _number(item["lon"], "[[map.landmarks]].lon"),
                                   str(item.get("style", "hospital"))))
 
+    theme = str(t.get("theme", "")).strip().lower()
+    if theme not in THEMES:
+        raise ConfigError(f"[map].theme must be one of {', '.join(repr(x) for x in THEMES)}, got {theme!r}")
+
     return MapConfig((west, south, east, north), tuple(str(x).upper() for x in labels),
-                     tuple(places), tuple(landmarks))
+                     tuple(places), tuple(landmarks), theme)
 
 
 _HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")

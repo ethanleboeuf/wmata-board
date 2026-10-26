@@ -41,6 +41,12 @@ def test_defaults_when_sections_missing(tmp_path):
     assert config.server.port == 8766
 
 
+def test_map_theme(tmp_path):
+    assert load_config(write(tmp_path, ""), environ={}).map.theme == ""
+    config = load_config(write(tmp_path, '[map]\ntheme = "Halloween"\n'), environ={})
+    assert config.map.theme == "halloween"
+
+
 def test_station_codes_are_uppercased(tmp_path):
     config = load_config(write(tmp_path, '[board]\nstations = ["k01"]\n'), environ={})
     assert config.board.stations == ("K01",)
@@ -59,6 +65,7 @@ def test_station_codes_are_uppercased(tmp_path):
     ('[map]\nbbox = [-76, 38.8, -77, 38.9]\n', "bbox"),
     ('[map]\nplaces = [["X", 38.9]]\n', "places"),
     ('[[map.landmarks]]\nname = "X"\n', "landmarks"),
+    ('[map]\ntheme = "christmas"\n', "theme"),
     ('[server]\nport = 70000\n', "port"),
     ('[board\n', "config.toml"),
 ])

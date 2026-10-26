@@ -83,6 +83,38 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 @keyframes rider-bob { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 @keyframes rider-wave { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
 @keyframes rider-arm { from { transform: rotate(0deg); } to { transform: rotate(35deg); } }
+/* Halloween theme ([map] theme = "halloween"; the map container gets .halloween). */
+.mapbox.halloween, .phonemap.halloween { background: #140e1f; }
+.halloween .overlay .place { fill: #4f3d6e; }
+.halloween .overlay .labels text, .halloween .overlay .landmark text, .halloween .overlay .home,
+.halloween .overlay .live { stroke: #140e1f; }
+.halloween .overlay .home { fill: #ffb062; }
+.halloween .pulse { border-color: #ff8a2a; }
+.halloween .overlay .cobweb { fill: none; stroke: #ece6f7; stroke-width: .9; stroke-opacity: .85; }
+.overlay .rider .hat { fill: #6b3fa0; }
+.overlay .rider .hatbrim { fill: none; stroke: #6b3fa0; stroke-width: .7; }
+.overlay .rider .hatband { fill: #ff8a2a; }
+.overlay .rider .robe { fill: #2b2236; stroke: #ff8a2a; stroke-width: .45; }
+.overlay .rider .broomstick { fill: none; stroke: #9a6a3a; stroke-width: 1.1; }
+.overlay .rider .bristles { fill: #e0b04a; }
+.overlay .rider .broomtie { fill: none; stroke: #b5524f; stroke-width: .8; }
+.spooks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.spooks .moon { position: absolute; right: 18px; top: 72px; }
+.spooks .drift { position: absolute; left: 0; width: 100%; animation: spook-right linear infinite; }
+.spooks .drift.bat { animation-name: spook-left; }
+.spooks .sprite { display: inline-block; }
+.spooks .ghost .sprite { opacity: .78; animation: spook-bob 2.6s ease-in-out infinite alternate; }
+.spooks .bat .sprite { animation: spook-swoop 1.7s ease-in-out infinite alternate; }
+.spooks .sheet { fill: #eef0ff; }
+.spooks .hole { fill: #1a1326; }
+.spooks .wing, .spooks .bat .body { fill: #3a2357; stroke: #c39bf5; stroke-width: 1; }
+.spooks .wing { transform-box: fill-box; transform-origin: 100% 40%; animation: spook-flap .16s ease-in-out infinite alternate; }
+.spooks .bat .eye { fill: #ffb062; }
+@keyframes spook-right { from { transform: translateX(-12%); } to { transform: translateX(104%); } }
+@keyframes spook-left { from { transform: translateX(104%); } to { transform: translateX(-12%); } }
+@keyframes spook-bob { from { transform: translateY(0); } to { transform: translateY(-14px); } }
+@keyframes spook-swoop { from { transform: translateY(-10px); } to { transform: translateY(10px); } }
+@keyframes spook-flap { from { transform: scaleY(1); } to { transform: scaleY(.55); } }
 .pulse { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 3px solid #fff;
          border-radius: 50%; animation: pulse 2.4s ease-out infinite; pointer-events: none; }
 @keyframes pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }

@@ -4,9 +4,11 @@
 // The overlay never takes pointer events (pans and pinches reach the map);
 // the phone hit-tests taps against the drawn trains with trainAt(). The trip
 // /api/positions names as `ride` gets a little rider on top (the easter egg).
+// A config theme (`net.theme`) can dress all of it up; see spooky.js.
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
+import { SPOOKY_LAND, spookyStyle, spookLayer, jackOLantern, cobweb, WITCH } from "./spooky.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const LW = 7;
@@ -90,7 +92,11 @@ function badge(line) {
 }
 
 export async function createMap(el, { interactive = false, fit = "cover", padding = null } = {}) {
-  const [net, style] = await Promise.all([getJson("/api/network"), loadStyle()]);
+  const [net, baseStyle] = await Promise.all([getJson("/api/network"), loadStyle()]);
+  const spooky = net.theme === "halloween";
+  const style = spooky ? spookyStyle(baseStyle) : baseStyle;
+  const land = spooky ? SPOOKY_LAND : LAND;
+  el.classList.toggle("halloween", spooky);
   if (!window.__pmtilesProtocol) {
     window.__pmtilesProtocol = new pmtiles.Protocol();
     maplibregl.addProtocol("pmtiles", window.__pmtilesProtocol.tile);
@@ -117,10 +123,13 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     `<stop offset="0.45" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0.28"/>` +
     `<stop offset="1" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0"/></radialGradient>`).join("")}` +
     `<radialGradient id="hosp"><stop offset="0" stop-color="#ff8a9b" stop-opacity=".55"/>` +
-    `<stop offset="1" stop-color="#ff8a9b" stop-opacity="0"/></radialGradient></defs>` +
+    `<stop offset="1" stop-color="#ff8a9b" stop-opacity="0"/></radialGradient>` +
+    `<radialGradient id="pumpglow"><stop offset="0" stop-color="#ff8a2a" stop-opacity=".6"/>` +
+    `<stop offset="1" stop-color="#ff8a2a" stop-opacity="0"/></radialGradient></defs>` +
     `<g class="static"></g><g class="trains"></g>` +
     `<text class="live" x="24" y="44"><tspan class="dot" fill="#3ddc84">●</tspan> <tspan class="lbl"></tspan></text>`;
   el.appendChild(svg);
+  if (spooky) el.insertBefore(spookLayer(), svg);   // ghosts drift under the lanes and trains
   const pulse = document.createElement("div");
   pulse.className = "pulse";
   el.appendChild(pulse);
@@ -154,7 +163,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       if (st === home) continue;
       const [x, y] = project(st.lon, st.lat);
       if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
-      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${st.transfer ? 6.2 : 3.8}" fill="${LAND}" ` +
+      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${st.transfer ? 6.2 : 3.8}" fill="${land}" ` +
                `stroke="#cfd8e3" stroke-width="${st.transfer ? 2.6 : 2}"/>`);
     }
     out.push(`<g class="labels">`);
@@ -170,15 +179,17 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       const [x, y] = project(lm.lon, lm.lat);
       const [first, ...rest] = lm.name.toUpperCase().split(" ");
       out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="26" fill="url(#hosp)"/>` +
-        `<rect x="${(x - 11).toFixed(1)}" y="${(y - 11).toFixed(1)}" width="22" height="22" rx="6" fill="#ff8a9b" stroke="${LAND}" stroke-width="2.5"/>` +
+        `<rect x="${(x - 11).toFixed(1)}" y="${(y - 11).toFixed(1)}" width="22" height="22" rx="6" fill="#ff8a9b" stroke="${land}" stroke-width="2.5"/>` +
         `<path d="M${x.toFixed(1)},${(y - 6).toFixed(1)} V${(y + 6).toFixed(1)} M${(x - 6).toFixed(1)},${y.toFixed(1)} H${(x + 6).toFixed(1)}" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>` +
+        (spooky ? cobweb(x, y) : "") +
         `<g class="landmark"><text x="${x.toFixed(1)}" y="${(y + 31).toFixed(1)}">${escapeHtml(first)}</text>` +
         (rest.length ? `<text x="${x.toFixed(1)}" y="${(y + 47).toFixed(1)}">${escapeHtml(rest.join(" "))}</text>` : "") + `</g>`);
     }
     if (home) {
       const [x, y] = project(home.lon, home.lat);
-      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" fill="${LAND}" stroke="#fff" stroke-width="3.5"/>` +
+      out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" fill="${land}" stroke="#fff" stroke-width="3.5"/>` +
         `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#fff"/>` +
+        (spooky ? jackOLantern(x + 10, y - 36) : "") +   // beside home: trains stopped there would hide it
         `<text class="home" x="${(x - 18).toFixed(1)}" y="${(y - 22).toFixed(1)}" text-anchor="end">${escapeHtml(home.name.toUpperCase())}</text>`);
       pulse.style.left = `${x}px`;
       pulse.style.top = `${y}px`;
@@ -266,7 +277,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       const on = riding !== null && info.get(v.id)?.trip_id === riding;
       if (on && !e.rider) {
         e.rider = svgEl("g", { class: "rider" });
-        e.rider.innerHTML = RIDER;
+        e.rider.innerHTML = spooky ? WITCH : RIDER;
         e.g.appendChild(e.rider);
       } else if (!on && e.rider) { e.rider.remove(); e.rider = null; }
       if (on && gTrains.lastChild !== e.g) gTrains.appendChild(e.g);   // she rides on top

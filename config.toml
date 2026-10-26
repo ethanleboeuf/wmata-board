@@ -24,6 +24,7 @@ idle_after = 90                # a feed is polled only this long after someone l
 bbox = [-77.122, 38.844, -76.978, 38.966]   # west, south, east, north
 labels = ["K04", "K02", "C05", "C04", "C01", "D03", "B03", "A03", "C07", "F05", "B05"]
 places = [["GEORGETOWN", 38.9085, -77.0665], ["THE MALL", 38.8873, -77.0405], ["ARLINGTON", 38.8705, -77.106], ["WASHINGTON", 38.9335, -77.096]]
+theme = "halloween"           # "" for the everyday map; "halloween" dresses it up (restart to apply)
 
 [[map.landmarks]]
 name = "Children's National"
