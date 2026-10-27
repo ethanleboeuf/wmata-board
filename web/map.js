@@ -4,11 +4,13 @@
 // The overlay never takes pointer events (pans and pinches reach the map);
 // the phone hit-tests taps against the drawn trains with trainAt(). The trip
 // /api/positions names as `ride` gets a little rider on top (the easter egg).
+// Mornings, while she rides, someone waves her off from home (wave.js).
 // A config theme (`net.theme`) can dress all of it up; see spooky.js.
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
 import { SPOOKY_LAND, spookyStyle, spookLayer, jackOLantern, cobweb, WITCH } from "./spooky.js";
+import { waveShown, waveHtml } from "./wave.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const LW = 7;
@@ -194,6 +196,10 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       pulse.style.left = `${x}px`;
       pulse.style.top = `${y}px`;
     }
+    if (waving) {
+      const [x, y] = project(net.wave.lon, net.wave.lat);
+      out.push(waveHtml(x, y, net.wave.message));
+    }
     gStatic.innerHTML = out.join("");
   }
 
@@ -201,7 +207,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   const glider = new Glider();
   const els = new Map();
   const info = new Map();   // vehicle id -> {line, cars, trip_id} from the last snapshot
-  let stale = true, riding = null;
+  let stale = true, riding = null, waving = false;
   let lastGoodMs = performance.now();
 
   function setStale(v) {
@@ -219,6 +225,8 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         lastGoodMs = performance.now();
         setStale(body.stale);
         riding = body.ride ?? null;
+        const wave = !!net.wave && waveShown(riding);
+        if (wave !== waving) { waving = wave; scheduleDraw(); }
         if (body.feed_timestamp !== null) {
           const vs = [];
           info.clear();

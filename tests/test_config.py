@@ -28,6 +28,9 @@ def test_repo_config_loads():
     assert config.map.places[0].lat == pytest.approx(38.9085)
     assert config.map.landmarks[0].name == "Children's National"
     assert config.map.landmarks[0].style == "hospital"
+    assert config.map.wave.message == "have a good day at work!"
+    assert config.map.wave.lat == pytest.approx(38.8912, abs=0.002)
+    assert config.map.wave.lon == pytest.approx(-77.0862, abs=0.002)
     assert (config.server.host, config.server.port) == ("127.0.0.1", 8766)
 
 
@@ -45,6 +48,12 @@ def test_map_theme(tmp_path):
     assert load_config(write(tmp_path, ""), environ={}).map.theme == ""
     config = load_config(write(tmp_path, '[map]\ntheme = "Halloween"\n'), environ={})
     assert config.map.theme == "halloween"
+
+
+def test_map_wave(tmp_path):
+    assert load_config(write(tmp_path, ""), environ={}).map.wave is None
+    wave = load_config(write(tmp_path, "[map.wave]\nlat = 38.9\nlon = -77.1\n"), environ={}).map.wave
+    assert (wave.lat, wave.lon, wave.message) == (38.9, -77.1, "have a good day at work!")
 
 
 def test_station_codes_are_uppercased(tmp_path):
@@ -66,6 +75,7 @@ def test_station_codes_are_uppercased(tmp_path):
     ('[map]\nplaces = [["X", 38.9]]\n', "places"),
     ('[[map.landmarks]]\nname = "X"\n', "landmarks"),
     ('[map]\ntheme = "christmas"\n', "theme"),
+    ('[map.wave]\nlat = 38.9\n', "wave"),
     ('[server]\nport = 70000\n', "port"),
     ('[board\n', "config.toml"),
 ])

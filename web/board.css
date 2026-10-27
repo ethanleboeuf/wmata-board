@@ -80,8 +80,30 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .rider .tail { fill: none; stroke: #f2a7b5; stroke-width: .9; transform-box: fill-box; transform-origin: 100% 0; animation: rider-wave 1.1s ease-in-out infinite alternate; }
 .overlay .rider .bob { animation: rider-bob .5s ease-in-out infinite alternate; }
 .overlay .rider .wave { transform-box: fill-box; transform-origin: 0 100%; animation: rider-arm .4s ease-in-out infinite alternate; }
+.overlay .wave-home { stroke-linecap: round; stroke-linejoin: round; }
+.overlay .wave-home .man { filter: drop-shadow(0 0 1.2px #0f151d) drop-shadow(0 0 1.2px #0f151d); }
+.overlay .wave-home .hair { fill: #5a3620; }
+.overlay .wave-home .face { fill: #f1c9a5; }
+.overlay .wave-home .skin { fill: none; stroke: #f1c9a5; stroke-width: 1.9; }
+.overlay .wave-home .shirt { fill: #4f8fd8; }
+.overlay .wave-home .jeans { fill: none; stroke: #2c3e5c; stroke-width: 2.6; }
+.overlay .wave-home .smile { fill: none; stroke: #8a4a34; stroke-width: .45; }
+.overlay .wave-home .eye { fill: #111; }
+.overlay .wave-home .wave { transform-box: fill-box; transform-origin: 100% 100%; animation: wave-arm .4s ease-in-out infinite alternate; }
+.overlay .wave-home .dog { filter: drop-shadow(0 0 .7px #cfd8e3) drop-shadow(0 0 .5px #cfd8e3); }
+.overlay .wave-home .dog .fur, .overlay .wave-home .dog .ear { fill: #121212; }
+.overlay .wave-home .dog .ear { fill: #2a2a2a; }
+.overlay .wave-home .dog .leg { fill: none; stroke: #121212; stroke-width: 1.3; }
+.overlay .wave-home .dog .nose { fill: #000; }
+.overlay .wave-home .dog .dogeye { fill: #e6ebf1; }
+.overlay .wave-home .dog .collar { fill: none; stroke: #e0453a; stroke-width: .8; }
+.overlay .wave-home .dog .tail { fill: none; stroke: #121212; stroke-width: 1.2; transform-box: fill-box; transform-origin: 0 100%;
+                                 animation: rider-wave .35s ease-in-out infinite alternate; }
+.overlay .wave-home .bubble { fill: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+.overlay .wave-home text { font-size: 13px; font-weight: 800; fill: #1a1f27; }
 @keyframes rider-bob { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 @keyframes rider-wave { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
+@keyframes wave-arm { from { transform: rotate(0deg); } to { transform: rotate(-35deg); } }
 @keyframes rider-arm { from { transform: rotate(0deg); } to { transform: rotate(35deg); } }
 /* Halloween theme ([map] theme = "halloween"; the map container gets .halloween). */
 .mapbox.halloween, .phonemap.halloween { background: #140e1f; }

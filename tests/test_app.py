@@ -167,6 +167,8 @@ def test_network_endpoint(app, fixtures):
     assert body["places"][0] == {"name": "GEORGETOWN", "lat": 38.9085, "lon": -77.0665}
     assert body["landmarks"][0]["style"] == "hospital"
     assert body["theme"] in ("", "halloween")
+    assert body["wave"]["message"] == "have a good day at work!"
+    assert set(body["wave"]) == {"lat", "lon", "message"}
     assert set(body["lines"]) == {"RD", "OR", "SV", "BL", "GR", "YL"}
 
 

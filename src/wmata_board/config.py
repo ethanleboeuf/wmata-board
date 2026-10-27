@@ -64,6 +64,17 @@ class Landmark:
     style: str = "hospital"
 
 
+WAVE_MESSAGE = "have a good day at work!"
+
+
+@dataclass(frozen=True, slots=True)
+class Wave:
+    """Who waves her off from near home while she's riding a morning train."""
+    lat: float
+    lon: float
+    message: str = WAVE_MESSAGE
+
+
 _DEFAULT_BBOX = (-77.122, 38.844, -76.978, 38.966)
 THEMES = ("", "halloween")   # "" is the everyday Board-navy map
 
@@ -75,6 +86,7 @@ class MapConfig:
     places: tuple[Place, ...] = ()
     landmarks: tuple[Landmark, ...] = ()
     theme: str = ""
+    wave: Wave | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,8 +230,16 @@ def _map(t: Mapping[str, Any]) -> MapConfig:
     if theme not in THEMES:
         raise ConfigError(f"[map].theme must be one of {', '.join(repr(x) for x in THEMES)}, got {theme!r}")
 
+    wave = None
+    if "wave" in t:
+        w = t["wave"]
+        if not isinstance(w, Mapping) or not {"lat", "lon"} <= set(w):
+            raise ConfigError("[map.wave] needs lat and lon")
+        wave = Wave(_number(w["lat"], "[map.wave].lat"), _number(w["lon"], "[map.wave].lon"),
+                    str(w.get("message", WAVE_MESSAGE)))
+
     return MapConfig((west, south, east, north), tuple(str(x).upper() for x in labels),
-                     tuple(places), tuple(landmarks), theme)
+                     tuple(places), tuple(landmarks), theme, wave)
 
 
 _HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
