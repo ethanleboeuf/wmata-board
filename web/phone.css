@@ -32,10 +32,10 @@ body.phone * { box-sizing: border-box; }
 .palerts .atext { font-size: 14px; -webkit-line-clamp: unset; display: block; flex-basis: 100%; }
 .phone .commute h2 { font-size: 12px; letter-spacing: 2px; margin: 14px 0 4px; white-space: normal; line-height: 1.4; }
 .phone .crow { height: 46px; column-gap: 6px; }
-.phone .crow.am { grid-template-columns: 28px 46px 1fr 44px 62px 40px; }
+.phone .crow.am { grid-template-columns: 28px 70px 1fr 44px 62px 40px; }
 .phone .crow.pm { grid-template-columns: 46px 44px 1fr 26px 46px 40px; }
 .phone .crow.pm.station { grid-template-columns: 46px 1fr 26px 46px 40px; }
-.phone .crow.am.station { grid-template-columns: 28px 46px 1fr 46px 50px 40px; }
+.phone .crow.am.station { grid-template-columns: 28px 70px 1fr 46px 50px 40px; }
 .phone .cmode { margin-top: 12px; }
 .cbtn { position: absolute; right: 68px; top: calc(14px + env(safe-area-inset-top)); height: 44px; padding: 0 16px;
         z-index: 3; border-radius: 22px; border: 1px solid #2a313c; background: rgba(13,17,23,.9); color: #e6ebf1;
@@ -45,8 +45,9 @@ body.phone * { box-sizing: border-box; }
 .phone .crow.chead { height: auto; font-size: 9px; letter-spacing: .5px; padding-bottom: 3px; }
 .phone .crow.cempty { font-size: 15px; padding: 10px 0; }
 .phone .ct, .phone .cw, .phone .cs { font-size: 17px; }
-.phone .cw small, .phone .cs small { font-size: 10px; margin-left: 2px; }
+.phone .cw small, .phone .cs small, .phone .ct small { font-size: 10px; margin-left: 2px; }
 .phone .sched { font-size: 8px; letter-spacing: .5px; padding: 1px 3px; border-width: 1px; border-radius: 4px; }
+.phone .cleave { font-size: 16px; margin: 4px 0 8px; white-space: normal; }
 .phone .crow.riding { box-shadow: inset 3px 0 0 #f7a8c0; }
 .phone .rtag { font-size: 18px; }
 .phone .ctabs { gap: 8px; margin: 2px 0 8px; }

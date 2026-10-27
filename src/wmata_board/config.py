@@ -93,6 +93,7 @@ class CommuteConfig:
     shuttle_ride: float = 10.0
     transfer_walk: float = 2.0
     shuttle_walk: float = 3.0
+    home_walk: float = 6.0                 # front door -> Court House platform
     rows: int = 5
     wall_platform: str = "2"               # the wall platform the panel replaces
     lines: tuple[str, ...] = ("OR", "SV", "RD")   # alerts for these show with the panel
@@ -255,7 +256,7 @@ def _commute(t: Mapping[str, Any]) -> CommuteConfig | None:
     if not isinstance(transfer, list) or len(transfer) != 2:
         raise ConfigError("[commute].transfer must be [arriving platform code, departing platform code]")
     minutes = {}
-    for name in ("shuttle_ride", "transfer_walk", "shuttle_walk"):
+    for name in ("shuttle_ride", "transfer_walk", "shuttle_walk", "home_walk"):
         v = _number(t.get(name, getattr(d, name)), f"[commute].{name}")
         if not 0 <= v <= 60:
             raise ConfigError(f"[commute].{name} must be 0-60 minutes")

@@ -113,6 +113,7 @@ def test_repo_commute_config():
     assert c.evening == (16 * 60, 18 * 60 + 30)
     assert c.shuttles == (8 * 60 + 12, 8 * 60 + 18)
     assert (c.shuttle_every, c.shuttle_ride, c.transfer_walk, c.shuttle_walk) == (6, 12, 2, 3)
+    assert c.home_walk == 6
     assert c.stations == ("K01", "C01", "A01", "B05", "B07")
 
 
@@ -128,6 +129,7 @@ def test_commute_is_optional(tmp_path):
     ('transfer = ["C01"]', "transfer must be"),
     ('home = "Court House"', "not a station code"),
     ('transfer_walk = -1', "0-60"),
+    ('home_walk = 90', "0-60"),
 ])
 def test_commute_validation(tmp_path, body, msg):
     with pytest.raises(ConfigError, match=msg):

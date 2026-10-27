@@ -50,16 +50,32 @@ function cbody(c, rows, head, row, empty) {
   return head + rows.map((r, i) => row(r, i)).join("");
 }
 
+// Morning rows lead with when to leave the apartment, the train's own time small
+// beside it. A row whose door time has passed is dimmed (she may be on her way).
+const late = r => r.door_in < 0 && !r.riding ? " late" : "";
+const leave = r => `<span class="ct">${escapeHtml(r.door)}<small>${escapeHtml(r.leave)}</small></span>`;
+
+// The headline: the first row she can still make from home -- one reaching a
+// target shuttle if any does. None while she's riding: she has left.
+function leaveHtml(rows, end) {
+  if (rows.some(r => r.riding)) return "";
+  const open = rows.filter(r => r.door_in >= 0);
+  const r = open.find(r => r.target) || open[0];
+  if (!r) return "";
+  const when = r.door_in === 0 ? "<b>now</b>" : `<b>${escapeHtml(r.door)}</b> · in ${r.door_in} min`;
+  return `<div class="cleave">Leave home ${when} → ${end(r)}</div>`;
+}
+
 // data-i: the phone opens a row's trip card by index.
 function amRow(r, i) {
-  const cls = (r.target ? " target" : "") + riding(r);
-  return `<div data-i="${i}" class="crow am${cls}">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>${wait(r.mc_wait)}` +
+  const cls = (r.target ? " target" : "") + riding(r) + late(r);
+  return `<div data-i="${i}" class="crow am${cls}">${chip(r.line)}${leave(r)}${wait(r.mc_wait)}` +
     `<span class="ct dim">${escapeHtml(r.brookland)}</span>` +
     `<span class="cs">${escapeHtml(r.shuttle)}<small>+${r.spare}</small></span>${tag(r)}</div>`;
 }
 
 function amStationRow(r, i) {
-  return `<div data-i="${i}" class="crow am station${riding(r)}">${chip(r.line)}<span class="ct">${escapeHtml(r.leave)}</span>` +
+  return `<div data-i="${i}" class="crow am station${riding(r)}${late(r)}">${chip(r.line)}${leave(r)}` +
     `${wait(r.mc_wait)}<span class="ct dim">${escapeHtml(r.red_leave)}</span>` +
     `<span class="ct">${escapeHtml(r.arrive)}</span>${tag(r)}</div>`;
 }
@@ -78,13 +94,17 @@ export function commuteAmHtml(c, dest = "hospital", { tabs = false } = {}) {
   const shuttles = am.shuttles.length ? ` · shuttle ${am.shuttles.map(escapeHtml).join(" / ")}` : "";
   const title = !tabs ? `${escapeHtml(c.name)}${shuttles}` : `To work${toStation ? "" : shuttles}`;
   const head = toStation
-    ? `<div class="crow am station chead"><span></span><span>Leave</span><span>Metro Ctr wait</span>` +
+    ? `<div class="crow am station chead"><span></span><span>Home · train</span><span>Metro Ctr wait</span>` +
       `<span>Red</span><span>${escapeHtml(am.station_name || "Arrive")}</span><span></span></div>`
-    : `<div class="crow am chead"><span></span><span>Leave</span><span>Metro Ctr wait</span>` +
+    : `<div class="crow am chead"><span></span><span>Home · train</span><span>Metro Ctr wait</span>` +
       `<span>Brookland</span><span class="r">Shuttle</span><span></span></div>`;
+  const rows = toStation ? am.station || [] : am.rows;
+  const end = toStation ? r => `${escapeHtml(am.station_name || "arrive")} ${escapeHtml(r.arrive)}`
+                        : r => `${escapeHtml(r.shuttle)} shuttle`;
   return `<section class="commute"><h2>${title}</h2>` +
     (tabs ? ctabs("dest", dest, c.name, am.station_name) : "") +
-    cbody(c, toStation ? am.station || [] : am.rows, head, toStation ? amStationRow : amRow, "No connections found") +
+    (c.notice ? "" : leaveHtml(rows, end)) +
+    cbody(c, rows, head, toStation ? amStationRow : amRow, "No connections found") +
     `</section>`;
 }
 

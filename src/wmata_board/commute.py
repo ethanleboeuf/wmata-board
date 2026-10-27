@@ -7,6 +7,10 @@ phone can also show the same trip ending at the other station (Takoma).
 Evening (phone): home again from either the hospital (shuttle -> Brookland ->
 Red) or the other evening start (Takoma: Red), transferring at Metro Center.
 
+Morning rows also say when to leave the apartment: the first train's
+departure minus the walk to the platform (`door`), and the minutes until then
+(`door_in`, negative once it has passed).
+
 Times on screen are floored to the minute, and waits/spare are differences of
 those shown minutes, so every row adds up as she reads it. Whether a
 connection is makeable is decided on the seconds. "Spare" is shuttle minus
@@ -115,10 +119,15 @@ def _am_shuttle(second: Leg, cfg: CommuteConfig, tz: ZoneInfo) -> float:
     return next_slot(second.arrive + cfg.shuttle_walk * 60, cfg.shuttle_every, tz)
 
 
-def _am_row(first: Leg, second: Leg, cfg: CommuteConfig, tz: ZoneInfo) -> dict:
+def _door(first: Leg, cfg: CommuteConfig, now: float, tz: ZoneInfo) -> dict:
+    door = first.depart - cfg.home_walk * 60
+    return {"door": clock(door, tz), "door_in": _min(door) - _min(now)}
+
+
+def _am_row(first: Leg, second: Leg, cfg: CommuteConfig, now: float, tz: ZoneInfo) -> dict:
     shuttle = _am_shuttle(second, cfg, tz)
     return {
-        "line": first.line, "leave": clock(first.depart, tz),
+        "line": first.line, "leave": clock(first.depart, tz), **_door(first, cfg, now, tz),
         "mc_arrive": clock(first.arrive, tz), "red_leave": clock(second.depart, tz),
         "mc_wait": _min(second.depart) - _min(first.arrive),
         "brookland": clock(second.arrive, tz), "shuttle": clock(shuttle, tz),
@@ -146,7 +155,7 @@ def plan_morning(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneInfo
             break
         if earliest is not None and _of_day(_am_shuttle(second, cfg, tz), tz) < earliest:
             continue
-        rows.append(_am_row(first, second, cfg, tz))
+        rows.append(_am_row(first, second, cfg, now, tz))
         if len(rows) == cfg.rows:
             break
     return rows
@@ -161,14 +170,14 @@ def plan_to_station(trips: list[Trip], cfg: CommuteConfig, now: float, tz: ZoneI
         second = _first(reds, first.arrive + cfg.transfer_walk * 60)
         if second is None:
             break
-        rows.append(_to_station_row(first, second, tz))
+        rows.append(_to_station_row(first, second, cfg, now, tz))
         if len(rows) == cfg.rows:
             break
     return rows
 
 
-def _to_station_row(first: Leg, second: Leg, tz: ZoneInfo) -> dict:
-    return {"line": first.line, "leave": clock(first.depart, tz),
+def _to_station_row(first: Leg, second: Leg, cfg: CommuteConfig, now: float, tz: ZoneInfo) -> dict:
+    return {"line": first.line, "leave": clock(first.depart, tz), **_door(first, cfg, now, tz),
             "mc_arrive": clock(first.arrive, tz), "red_leave": clock(second.depart, tz),
             "mc_wait": _min(second.depart) - _min(first.arrive), "arrive": clock(second.arrive, tz),
             "live": first.live and second.live, "legs": [first.as_json(), second.as_json()]}
@@ -296,16 +305,16 @@ def _pair(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], a: tuple[str
 
 
 def ride_rows(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], cfg: CommuteConfig,
-              tz: ZoneInfo) -> dict[str, dict]:
+              now: float, tz: ZoneInfo) -> dict[str, dict]:
     """The ride's row for each list it fits, by kind: "am" (hospital),
     "am-station", "pm" (hospital), "pm-station"."""
     orsv, red = cfg.transfer
     walk = cfg.transfer_walk * 60
     out = {}
     if pair := _pair(ride, sources, (cfg.home, orsv), (red, cfg.shuttle_stop), walk):
-        out["am"] = _am_row(*pair, cfg, tz)
+        out["am"] = _am_row(*pair, cfg, now, tz)
     if pair := _pair(ride, sources, (cfg.home, orsv), (red, cfg.evening_from), walk):
-        out["am-station"] = _to_station_row(*pair, tz)
+        out["am-station"] = _to_station_row(*pair, cfg, now, tz)
     if pair := _pair(ride, sources, (cfg.shuttle_stop, red), (orsv, cfg.home), walk):
         first = pair[0]
         shuttle = _prev_slot(first.depart - (cfg.shuttle_ride + cfg.shuttle_walk) * 60, cfg.shuttle_every, tz)
@@ -382,7 +391,7 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
         memory.track(ride, trips)
         sources = [{t.id: t for t in trips if t.live}, memory.trips, {t.id: t for t in trips},
                    {t.id: t for t, _ in sched}]
-        built = ride_rows(ride, sources, cfg, tz)
+        built = ride_rows(ride, sources, cfg, now, tz)
         memory.partners |= {tid for r in built.values() for tid in _trips_of(r)} - set(ride)
         if mode is None:
             mode = AM if any(k.startswith(AM) for k in built) else PM if built else None

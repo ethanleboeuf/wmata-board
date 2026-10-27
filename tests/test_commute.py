@@ -100,6 +100,18 @@ def test_morning_rows_connect_on_seconds():
                                {"trip": "r751", "line": "RD", "from": "A01", "to": "B05"}]
 
 
+def test_morning_rows_say_when_to_leave_home():
+    rows = plan_morning(MORNING, CFG, at("7:33:30"), ET)
+    assert [(r["door"], r["door_in"]) for r in rows] == [("7:32", -1), ("7:39", 6), ("7:42", 9)]
+    rows = plan_to_station(MORNING, CFG, at("7:33:30"), ET)
+    assert [(r["door"], r["door_in"]) for r in rows] == [("7:32", -1), ("7:39", 6), ("7:42", 9)]
+
+
+def test_home_walk_is_configurable():
+    [row, *_] = plan_morning(MORNING, replace(CFG, home_walk=10), at("7:20"), ET)
+    assert (row["door"], row["door_in"]) == ("7:28", 8)
+
+
 def test_morning_skips_trains_reaching_shuttles_well_before_the_targets():
     early = [orsv("sv700", "7:00", "7:11"), red_in("r715", "7:15", "7:27")]
     assert plan_morning(early + MORNING, CFG, at("6:45"), ET)[0]["leave"] == "7:38"
@@ -250,6 +262,7 @@ def test_ride_row_stays_after_its_trains_leave_with_the_times_last_seen():
     assert pinned["riding"] and pinned["live"]
     assert (pinned["leave"], pinned["mc_arrive"], pinned["red_leave"], pinned["brookland"], pinned["shuttle"]) == (
         "7:38", "7:48", "7:51", "8:04", "8:12")
+    assert (pinned["door"], pinned["door_in"]) == ("7:32", -24)
     assert len(rows) <= CFG.rows
 
 

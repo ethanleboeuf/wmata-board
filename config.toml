@@ -49,6 +49,7 @@ shuttle_every = 6             # minutes; it leaves both ends on :00, :06, :12 ..
 shuttle_ride = 12             # hospital -> Brookland stop; + shuttle_walk = 15 door to platform
 transfer_walk = 2             # Metro Center, platform to platform, minutes
 shuttle_walk = 3              # Brookland, platform <-> shuttle stop, minutes
+home_walk = 6                 # the apartment door -> Court House platform, minutes
 rows = 5
 lines = ["OR", "SV", "RD"]    # alerts for these lines show while the panel is up
 wall_platform = "2"           # the wall's westbound list gives way to the panel
