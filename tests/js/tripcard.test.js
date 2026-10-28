@@ -118,3 +118,35 @@ test("station search forgives punctuation, abbreviations and nicknames", async (
   assert.match(html, /^<div class="phead">Favorites<\/div><div class="prow on">.*Court House.*★.*L&#39;Enfant Plaza.*All stations/s);
   assert.doesNotMatch(pickerListHtml(st, "len", "X07", ["X07"]), /Favorites/);
 });
+
+const RED = { id: "r2", line: "RD", destination: "Glenmont", cars: 8, delay_s: 0, live: true,
+  stops: ["Gallery Place", "Judiciary Square", "Union Station", "NoMa", "Rhode Island Ave", "Brookland-CUA", "Fort Totten",
+          "Takoma", "Silver Spring"].map((name, i) => ({ ...stop(`S${i}`, name, `8:0${i}`), mine: /Brookland|Takoma/.test(name) })) };
+
+test("a map train always shows her stations past the first five, with the gap counted", () => {
+  const html = tripHtml(RED);
+  assert.equal((html.match(/class="tstop[ "]/g) || []).length, 7);   // five, Brookland, Takoma
+  assert.match(html, /Rhode Island Ave.*Brookland-CUA<\/span><span class="ttime">8:05/);
+  assert.match(html, /class="tstop end"><span>Brookland-CUA/);
+  assert.match(html, /<div class="tgap">⋯ 1 stop<\/div><div class="tstop end"><span>Takoma/);
+  assert.doesNotMatch(html, /Silver Spring/);
+  assert.match(html, /<button class="tall">All 9 stops<\/button>/);
+});
+
+test("all stops on request, and back", () => {
+  const html = tripHtml(RED, { all: true });
+  assert.equal((html.match(/class="tstop[ "]/g) || []).length, 9);
+  assert.doesNotMatch(html, /tgap/);
+  assert.match(html, /<button class="tall">Fewer stops<\/button>/);
+  assert.match(tripHtml(SV), /All 6 stops/);
+  assert.doesNotMatch(tripHtml({ ...SV, stops: SV.stops.slice(0, 5) }), /tall/);
+  assert.doesNotMatch(tripHtml(SV, { from: "K01", to: "C01" }), /tall/);   // a commute leg is already whole
+});
+
+test("a missed connection's note on her row and her card", () => {
+  const row = { ...amRow, riding: true, note: "Missed the 8:01 Red — now the 8:06" };
+  const html = commuteAmHtml({ name: "CN", notice: null, am: { shuttles: [], rows: [row, amRow] } });
+  assert.equal((html.match(/class="cnote"/g) || []).length, 1);
+  assert.match(html, /riding[^>]*>.*?<\/div><div class="cnote">Missed the 8:01 Red — now the 8:06<\/div>/);
+  assert.match(commuteCardHtml(row, "am", [SV, RD]), /<div class="tstep">Missed the 8:01 Red — now the 8:06<\/div>/);
+});

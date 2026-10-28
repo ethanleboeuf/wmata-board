@@ -37,6 +37,14 @@ def test_live_trip_with_delay_cars_and_remaining_stops():
         ("Court House", "7:41"), ("Metro Center", "7:52"), ("Federal Triangle", None), ("Largo", "8:40")]
 
 
+def test_her_stations_are_marked():
+    upd = TripUpdates(0, {"sv1": LIVE})
+    d = trip_detail("sv1", live=upd, scheduled=[SCHED], names=NAMES, positions=POS, now=at("7:30"), tz=ET,
+                    mine={"C01", "B05"})
+    assert [s["mine"] for s in d["stops"]] == [False, True, False, False]
+    assert not any(s["mine"] for s in detail()["stops"])
+
+
 def test_passed_stops_drop():
     assert [s["code"] for s in detail(now="7:45")["stops"]] == ["C01", "D01", "G05"]
 

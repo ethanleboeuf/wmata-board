@@ -20,6 +20,11 @@ The row she said "I'm on this one" for (ride.py) is pinned to the top of its
 list until the ride ends, after its trains have left. The live feed forgets a
 trip's passed stops, so RideMemory keeps the last times seen for the ride's
 trips; the timetable is the fallback after a restart.
+
+A two-train ride whose first train now reaches the transfer too late for the
+second (with less than half the platform walk to spare: she'd hurry) moves to
+the next train she can make, with a note on her row. The app applies the move
+to the ride itself, so the rider on the maps changes trains too.
 """
 
 from __future__ import annotations
@@ -41,6 +46,7 @@ INCIDENTS_EXPIRE_AFTER_S = 900.0   # as on the board: an incident feed this old 
 EARLIER_SLOTS = 2          # morning rows start two shuttles before the first target
 NOTICE_UNAVAILABLE = "Commute times unavailable"
 RIDE_GRACE_MIN = 120       # a one-train ride keeps the panel up this long past its window
+LINE_NAMES = {"RD": "Red", "OR": "Orange", "SV": "Silver", "BL": "Blue", "GR": "Green", "YL": "Yellow"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +108,11 @@ def clock(t: float, tz: ZoneInfo) -> str:
 def _of_day(t: float, tz: ZoneInfo) -> int:
     d = datetime.fromtimestamp(t, tz)
     return d.hour * 60 + d.minute
+
+
+def commute_stations(cfg: CommuteConfig) -> frozenset[str]:
+    """Where she gets on, changes and gets off (the phone's trip card marks them)."""
+    return frozenset({cfg.home, *cfg.transfer, cfg.shuttle_stop, cfg.evening_from})
 
 
 def commute_mode(cfg: CommuteConfig, now_local: datetime) -> str | None:
@@ -230,6 +241,16 @@ def plan_from_station(trips: list[Trip], cfg: CommuteConfig, now: float, tz: Zon
 
 # ---- the ride she's on -------------------------------------------------------
 
+@dataclass(frozen=True, slots=True)
+class Rebooking:
+    """The ride moved to a later second train: the ride's new trips, when she
+    changes (the first train's arrival) and arrives (the second's)."""
+    trips: tuple[str, ...]
+    switch_at: float
+    arrive: float
+    note: str
+
+
 @dataclass
 class RideMemory:
     """The last times seen for the ride's trips, and its rows as last planned.
@@ -238,12 +259,15 @@ class RideMemory:
     trips: dict[str, Trip] = field(default_factory=dict)
     rows: dict[str, dict] = field(default_factory=dict)
     partners: set[str] = field(default_factory=set)   # trains paired with a one-train ride
+    note: str | None = None                # why the ride changed trains, shown on her row
+    rebooked: Rebooking | None = None      # a move the app has yet to apply to the ride
 
     def track(self, ride: tuple[str, ...], trips: Iterable[Trip]) -> None:
         """Live times only (the timetable is always there to fall back on). The
         newest win; a stop the feed no longer lists (passed) is kept."""
         if ride != self.ride:
             self.ride, self.trips, self.rows, self.partners = ride, {}, {}, set()
+            self.note = self.rebooked = None
         wanted = set(ride) | self.partners
         for t in trips:
             if t.id not in wanted or not t.live:
@@ -324,6 +348,35 @@ def ride_rows(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], cfg: Com
     return out
 
 
+def _connections(cfg: CommuteConfig) -> list[tuple[tuple[str, str], tuple[str, str]]]:
+    """Every two-train commute, as (first leg, second leg), each (from, to)."""
+    orsv, red = cfg.transfer
+    return [((cfg.home, orsv), (red, cfg.shuttle_stop)), ((cfg.home, orsv), (red, cfg.evening_from)),
+            ((cfg.shuttle_stop, red), (orsv, cfg.home)), ((cfg.evening_from, red), (orsv, cfg.home))]
+
+
+def rebook(ride: tuple[str, ...], sources: list[Mapping[str, Trip]], cfg: CommuteConfig,
+           tz: ZoneInfo) -> Rebooking | None:
+    """A two-train ride whose connection is missed, moved to the next train on."""
+    if len(ride) != 2:
+        return None
+    for a, b in _connections(cfg):
+        first, second = _leg_of(sources, ride[0], *a), _leg_of(sources, ride[1], *b)
+        if first is None or second is None:
+            continue
+        if first.arrive + cfg.transfer_walk * 30 <= second.depart:
+            return None
+        pair = _pair(ride[:1], sources, a, b, cfg.transfer_walk * 60)
+        if pair is None:
+            return None
+        new = pair[1]
+        line = "" if new.line == second.line else f" {LINE_NAMES.get(new.line, new.line)}"
+        note = (f"Missed the {clock(second.depart, tz)} {LINE_NAMES.get(second.line, second.line)}"
+                f" — now the {clock(new.depart, tz)}{line}")
+        return Rebooking((ride[0], new.trip), first.arrive, new.arrive, note)
+    return None
+
+
 def _trips_of(row: dict) -> tuple[str, ...]:
     return tuple(leg["trip"] for leg in row["legs"])
 
@@ -343,6 +396,8 @@ def _pin(rows: list[dict], kind: str, ride: tuple[str, ...], built: dict[str, di
             row = {**row, "shuttle": planned["shuttle"], "brookland": planned["brookland"]}
     else:
         return rows
+    if memory.note:
+        row = {**row, "note": memory.note}
     return ([{**row, "riding": True}] + [r for r in rows if _trips_of(r) != trips])[:limit]
 
 
@@ -391,6 +446,10 @@ def build_commute(cfg: CommuteConfig, *, schedule: FeedState, updates: FeedState
         memory.track(ride, trips)
         sources = [{t.id: t for t in trips if t.live}, memory.trips, {t.id: t for t in trips},
                    {t.id: t for t, _ in sched}]
+        if (moved := rebook(ride, sources, cfg, tz)) is not None:
+            ride = memory.ride = moved.trips   # the same ride, so track() keeps what it knows
+            memory.note, memory.rebooked = moved.note, moved
+            memory.track(ride, trips)
         built = ride_rows(ride, sources, cfg, now, tz)
         memory.partners |= {tid for r in built.values() for tid in _trips_of(r)} - set(ride)
         if mode is None:

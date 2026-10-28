@@ -295,6 +295,24 @@ in chat (no separate spec/plan):
 - The rider becomes a witch: pointy purple hat with an orange band, black
   dress, sitting on a broom; the rat gets a witch hat too.
 
+## Commute feedback (added 2026-10-28)
+
+From her first rides with "I'm on this one":
+
+- **Missed connections move the ride.** A pinned two-train ride used to keep
+  its Red train even after a late Orange/Silver made it unmakeable, so her
+  row (and the rider) sat on a train that had already left. Now, each
+  `/api/commute`, if the first train's arrival at the transfer leaves less
+  than half the platform walk before the second leaves, the ride moves to the
+  next train she makes (`commute.rebook`), her row gets a note ("Missed the
+  8:01 Red — now the 8:06"; the line is named when it changes), and the app
+  rewrites the stored ride so every map's rider switches too. Half the walk,
+  not all of it: a pinned plan started out makeable, and she hurries.
+- **Train cards show her stations.** `/api/trip` marks her commute stations
+  (`mine`); a map train's card shows the next five stops plus any of hers
+  further on (Brookland is six stops past Metro Center), with "⋯ N stops"
+  for the gap, and an "All N stops" button that opens the full list.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by

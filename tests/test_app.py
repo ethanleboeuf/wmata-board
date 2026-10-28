@@ -331,6 +331,7 @@ def test_trip_endpoint_timetable_preview_and_404(trip_app):
         missing = c.get("/api/trip/no-such-trip")
     assert body["live"] is False and body["line"] == leg["line"]
     assert [s["code"] for s in body["stops"]][:2] == ["K01", "C01"]
+    assert body["stops"][0]["mine"] and body["stops"][1]["mine"]   # her stations, marked for the card
     assert missing.status_code == 404 and missing.json() == {"error": "unknown trip"}
 
 

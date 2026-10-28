@@ -20,12 +20,12 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .board import build_board
-from .commute import AM, PM, RideMemory, build_commute, commute_mode, live_updates
+from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_stations, live_updates
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
-from .ride import load_ride, parse_ride, ride_trip, ride_trips, save_ride
+from .ride import load_ride, moved_ride, parse_ride, ride_trip, ride_trips, save_ride
 from .state import FeedState
 from .tripinfo import station_names, trip_detail
 from .trips import scheduled_trips
@@ -195,6 +195,11 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                              updates=FeedState() if at else feeds["trips"].state, tz=tz, now=now, now_mono=clock(),
                              wall_now=wall_now, mode=mode, incidents=feeds["incidents"].state,
                              ride=riding, memory=ride_memory)
+        if (moved := ride_memory.rebooked) is not None:   # she missed a connection: the rider moves too
+            ride_memory.rebooked = None
+            if app.state.ride is not None and app.state.ride.trips == riding:
+                app.state.ride = moved_ride(app.state.ride, moved.trips, moved.switch_at, moved.arrive)
+                save_ride(ride_path, app.state.ride)
         return JSONResponse(body, headers=NO_STORE)
 
     def preview_time(wall_now: float, at: str | None) -> float:
@@ -218,7 +223,8 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         scheduled = [t for t, _ in scheduled_trips(schedule, datetime.fromtimestamp(now, tz).date(), tz)] if schedule else []
         detail = trip_detail(trip_id, live=live, scheduled=scheduled,
                              names=station_names(net_feed.state.value if net_feed else None, schedule),
-                             positions=feeds["positions"].state.value, now=now, tz=tz)
+                             positions=feeds["positions"].state.value, now=now, tz=tz,
+                             mine=commute_stations(config.commute) if config.commute else ())
         if detail is None:
             return JSONResponse({"error": "unknown trip"}, status_code=404, headers=NO_STORE)
         return JSONResponse(detail, headers=NO_STORE)

@@ -102,7 +102,7 @@ function renderAlerts() {
 // commute row: both, switching at Metro Center) gets a little rider on every
 // map -- the ride lives on the server (/api/ride), so the wall shows it too.
 const CARD_REFRESH_MS = 15000;
-let card = null;   // {legs, load: async () => html, html, trips} while open
+let card = null;   // {legs, load: async () => html, html, trips, render?} while open
 let ride = null;   // the server's current ride, refreshed with each card
 async function rideApi(method = "GET", body) {
   try {
@@ -149,15 +149,19 @@ function closeCard() { card = null; $("card").hidden = true; }
 $("card").addEventListener("click", ev => {
   if (ev.target.closest(".tclose")) closeCard();
   else if (ev.target.closest(".tride")) toggleRide();
+  else if (ev.target.closest(".tall") && card?.render) { card.all = !card.all; showCard(card.render()); }
 });
 
+// A map train's card can show every stop ("All N stops"); the choice lasts while it's open.
 function openTrain(train) {
   const next = {
     legs: train.trip_id ? [{ trip: train.trip_id, to: null }] : [],
     loading: trainCardHtml(train, null).replace("No stop predictions for this train", "Loading…"),
+    all: false,
+    render: () => trainCardHtml(train, next.trips[0], { all: next.all }),
     load: async () => {
       next.trips = [train.trip_id ? await fetchTrip(train.trip_id) : null];
-      return trainCardHtml(train, next.trips[0]);
+      return next.render();
     },
   };
   openCard(next);

@@ -44,10 +44,13 @@ const riding = r => r.riding ? " riding" : "";
 const tag = r => r.riding ? `<span class="rtag" title="Riding">🙋</span>` : sched(r.live);
 const cnotice = text => `<div class="crow cempty">${escapeHtml(text)}</div>`;
 
+// Her row says so when it moved her to a later train (a missed connection).
+const cnote = r => r.note ? `<div class="cnote">${escapeHtml(r.note)}</div>` : "";
+
 function cbody(c, rows, head, row, empty) {
   if (c.notice) return cnotice(c.notice);
   if (!rows.length) return cnotice(empty);
-  return head + rows.map((r, i) => row(r, i)).join("");
+  return head + rows.map((r, i) => row(r, i) + cnote(r)).join("");
 }
 
 // Morning rows lead with when to leave the apartment, the train's own time small
@@ -137,12 +140,28 @@ export function commutePmHtml(c, origin) {
 
 const TRIP_STOPS = 5;
 
-// The stops to show: from..to inclusive for a commute leg, else the next few.
-function legStops(stops, from, to) {
-  if (!from) return stops.slice(0, TRIP_STOPS);
+// The stops to show: from..to inclusive for a commute leg, else the next few
+// and any of her stations (`mine`) further on -- or, with `all`, every one.
+// null marks a gap: [stops, null, stops...] -> the count is filled in by tripHtml.
+function legStops(stops, from, to, all) {
+  if (!from) {
+    if (all) return stops;
+    return stops.flatMap((s, i) => i < TRIP_STOPS || s.mine ? [s] : []);
+  }
   const a = stops.findIndex(s => s.code === from);
   const b = stops.findIndex(s => s.code === to);
   return stops.slice(Math.max(0, a), b >= 0 ? b + 1 : undefined);
+}
+
+function stopsHtml(all, shown, ends) {
+  let last = -1;
+  return shown.map(s => {
+    const i = all.indexOf(s), gap = i - last - 1;
+    last = i;
+    return (gap > 0 ? `<div class="tgap">⋯ ${gap} stop${gap > 1 ? "s" : ""}</div>` : "") +
+      `<div class="tstop${ends.has(s.code) || s.mine ? " end" : ""}">` +
+      `<span>${escapeHtml(s.name)}</span><span class="ttime">${escapeHtml(s.time ?? "—")}</span></div>`;
+  }).join("");
 }
 
 function tripHead(line, title, meta) {
@@ -150,25 +169,26 @@ function tripHead(line, title, meta) {
     (meta.length ? `<div class="tmeta">${meta.map(escapeHtml).join(" · ")}</div>` : "");
 }
 
-// One train: line, destination, cars, live/sched, delay, and its stops.
-export function tripHtml(trip, { from = null, to = null } = {}) {
+// One train: line, destination, cars, live/sched, delay, and its stops. A map
+// train's card can open up to every stop (`all`; the phone keeps the choice).
+export function tripHtml(trip, { from = null, to = null, all = false } = {}) {
   const meta = [];
   if (trip.cars) meta.push(`${trip.cars} cars`);
   const late = delayText(trip.delay_s);
   if (late) meta.push(late);
   meta.push(trip.live ? "live" : "timetable");
-  const stops = legStops(trip.stops, from, to);
+  const stops = legStops(trip.stops, from, to, all);
   const ends = new Set([from, to]);
+  const more = !from && trip.stops.length > TRIP_STOPS
+    ? `<button class="tall">${all ? "Fewer stops" : `All ${trip.stops.length} stops`}</button>` : "";
   return `<section class="trip">${tripHead(trip.line, trip.destination ? `To ${trip.destination}` : "Train", meta)}` +
-    (stops.length
-      ? `<div class="tstops">${stops.map(s => `<div class="tstop${ends.has(s.code) ? " end" : ""}">` +
-          `<span>${escapeHtml(s.name)}</span><span class="ttime">${escapeHtml(s.time ?? "—")}</span></div>`).join("")}</div>`
-      : `<div class="tnone">No upcoming stops</div>`) + `</section>`;
+    (stops.length ? `<div class="tstops">${stopsHtml(trip.stops, stops, ends)}</div>${more}`
+                  : `<div class="tnone">No upcoming stops</div>`) + `</section>`;
 }
 
 // Map tap: `trip` is null when its predictions couldn't be found.
-export function trainCardHtml(train, trip) {
-  if (trip) return tripHtml(trip);
+export function trainCardHtml(train, trip, { all = false } = {}) {
+  if (trip) return tripHtml(trip, { all });
   const meta = train.cars ? [`${train.cars} cars`] : [];
   return `<section class="trip">${tripHead(train.line, "Train", meta)}` +
     `<div class="tnone">No stop predictions for this train</div></section>`;
@@ -194,6 +214,7 @@ export function commuteCardHtml(row, kind, trips, stationName = "Takoma") {
     parts.push(`<h3>Shuttle ${escapeHtml(row.shuttle)} → home ${escapeHtml(row.home)}</h3>`);
     parts.push(step(`Shuttle ${row.shuttle} → Brookland ${row.brookland}`));
   } else parts.push(`<h3>Red ${escapeHtml(row.red_leave)} → home ${escapeHtml(row.home)}</h3>`);
+  if (row.note) parts.push(step(row.note));
   parts.push(legHtml(a, trips[0]));
   parts.push(step(`Metro Center · ${row.mc_wait} min wait`));
   parts.push(legHtml(b, trips[1]));

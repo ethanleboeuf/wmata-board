@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, RideMemory, build_commute, commute_mode, departures,
+from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, Rebooking, RideMemory, build_commute, commute_mode, departures,
                                  next_slot, plan_from_hospital, plan_from_station, plan_morning,
                                  plan_to_station)
 from wmata_board.config import CommuteConfig
@@ -299,6 +299,39 @@ def test_an_evening_red_train_off_the_map():
     hospital = build(at("17:20"), schedule=schedule_of(EVENING), ride=("r525",), memory=RideMemory())["pm"]["hospital"]
     assert (hospital[0]["red_leave"], hospital[0]["line"], hospital[0]["home"], hospital[0]["riding"]) == (
         "5:25", "SV", "5:50", True)
+
+
+def test_a_late_first_train_moves_the_ride_to_the_next_red_it_makes():
+    # sv748 was to make the 8:01 Red with 2 min to spare; it now reaches Metro Center at 8:00:30
+    memory, ride = RideMemory(), ("sv748", "r801")
+    late = TripUpdates(int(at("7:50")), {"sv748": live("sv748", "SV", ("K01", "7:50"), ("C01", "8:00:30"))})
+    rows = build(at("7:50"), schedule=schedule_of(MORNING), updates=late, ride=ride, memory=memory)["am"]["rows"]
+    assert (rows[0]["red_leave"], rows[0]["brookland"], rows[0]["shuttle"], rows[0]["riding"]) == (
+        "8:06", "8:18", "8:24", True)
+    assert rows[0]["note"] == "Missed the 8:01 Red — now the 8:06"
+    assert [l["trip"] for l in rows[0]["legs"]] == ["sv748", "r806"]
+    assert not any(r.get("note") for r in rows[1:])
+    # the app moves the ride (and the rider) onto the new train
+    assert memory.rebooked == Rebooking(("sv748", "r806"), at("8:00:30"), at("8:18"), rows[0]["note"])
+    # ...and once it has, the note stays and nothing resets
+    memory.rebooked = None
+    again = build(at("7:55"), schedule=schedule_of(MORNING), updates=late, ride=("sv748", "r806"), memory=memory)
+    assert again["am"]["rows"][0]["note"] == "Missed the 8:01 Red — now the 8:06" and memory.rebooked is None
+
+
+def test_a_connection_still_made_by_a_hurry_stays():
+    memory, ride = RideMemory(), ("sv748", "r801")
+    late = TripUpdates(int(at("7:50")), {"sv748": live("sv748", "SV", ("K01", "7:50"), ("C01", "7:59:59"))})
+    rows = build(at("7:50"), schedule=schedule_of(MORNING), updates=late, ride=ride, memory=memory)["am"]["rows"]
+    assert rows[0]["red_leave"] == "8:01" and "note" not in rows[0] and memory.rebooked is None
+
+
+def test_an_evening_ride_moves_to_the_next_train_home_naming_its_line():
+    memory, ride = RideMemory(), ("r519", "o533")
+    late = TripUpdates(int(at("17:20")), {"r519": live("r519", "RD", ("B05", "17:21"), ("A01", "17:34"))})
+    row = build(at("17:20"), schedule=schedule_of(EVENING), updates=late, ride=ride, memory=memory)["pm"]["hospital"][0]
+    assert (row["line"], row["home"], row["riding"]) == ("SV", "5:50", True)
+    assert row["note"] == "Missed the 5:33 Orange — now the 5:40 Silver"
 
 
 def test_a_one_train_ride_keeps_the_panel_only_a_while_on_weekdays():

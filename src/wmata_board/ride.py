@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 MAX_RIDE_S = 4 * 3600          # a ride ending further out than this is refused
+OFF_AFTER_S = 120              # she's still riding this long after the last arrival (as the phone sets it)
 _TRIP_RE = re.compile(r"^[\w.:-]{1,64}$")
 
 
@@ -54,6 +55,12 @@ def ride_trip(ride: Ride | None, now: float) -> str | None:
 def ride_trips(ride: Ride | None, now: float) -> tuple[str, ...] | None:
     """All the ride's trips while it lasts (the commute panel pins their row)."""
     return None if ride is None or now >= ride.until else ride.trips
+
+
+def moved_ride(ride: Ride, trips: tuple[str, ...], switch_at: float, arrive: float) -> Ride:
+    """The ride onto a later connection (commute.rebook): it lasts until that
+    train arrives, and never ends sooner than it would have."""
+    return Ride(trips, switch_at, max(ride.until, arrive + OFF_AFTER_S))
 
 
 def load_ride(path: Path) -> Ride | None:
