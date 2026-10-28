@@ -27,10 +27,15 @@ export function bubbleLines(message) {
   return lines;
 }
 
-// Ground at y=0, him at x=0, the dog to his right looking up at him.
+// Ground at y=0, him at x=0, the dog to his right looking up at him. He's in
+// a white Nationals home jersey (red piping, curly W); the dog's collar is
+// night sky with a star and a ringed-planet tag.
 const man = (cls, arms) => `<g class="${cls}">` +
   `<path class="jeans" d="M-1.8,-11.5 L-2.4,0 M1.8,-11.5 L2.4,0"/>` +
-  `<path class="shirt" d="M-4.2,-11 L-3.6,-20.4 Q0,-21.8 3.6,-20.4 L4.2,-11 Z"/>` +
+  `<path class="jersey" d="M-4.2,-11 L-3.6,-20.4 Q0,-21.8 3.6,-20.4 L4.2,-11 Z"/>` +
+  `<path class="piping" d="M-1.4,-21 L0,-19.2 L1.4,-21 M0,-19.2 L0,-11.2"/>` +
+  `<path class="curly-w" d="M-3,-18.2 Q-2.6,-15.4 -1.9,-14.2 Q-1.3,-15.9 -.9,-17.2 Q-.5,-15.9 .1,-14.2 Q.8,-15.4 1.2,-18.2"` +
+  ` transform="translate(1.1,0)"/>` +
   arms +
   `<circle class="face" cx="0" cy="-24.8" r="3.6"/>` +
   `<path class="hair" d="M-3.8,-24.6 C-4.6,-29.8 3.8,-30.6 3.9,-25.4 C2.4,-27.8 -0.8,-27.9 -3,-26.4 Z"/>` +
@@ -53,6 +58,8 @@ const DOG = `<g class="dog">` +
   `<path class="ear" d="M8.2,-9.8 Q10.2,-9.4 9.4,-6.6 Z"/>` +
   `<circle class="dogeye" cx="7.2" cy="-8.6" r=".42"/>` +
   `<path class="collar" d="M8.8,-6.2 L9.8,-8.6"/>` +
+  `<circle class="star" cx="9.35" cy="-7.45" r=".28"/>` +
+  `<g class="planet"><circle cx="9" cy="-4.9" r=".85"/><ellipse class="ring" cx="9" cy="-4.9" rx="1.5" ry=".42" transform="rotate(-20 9 -4.9)"/></g>` +
   `</g>`;
 
 const f = v => v.toFixed(1);

@@ -51,3 +51,13 @@ test("confetti is the same every redraw, so a pan doesn't reshuffle it", () => {
   assert.equal(confetti(10, 20), confetti(10, 20));
   assert.notEqual(confetti(10, 20), confetti(11, 20));   // but it moves with the spot
 });
+
+test("he wears a Nationals jersey and the dog a space collar, morning and afternoon", () => {
+  for (const svg of [waveHtml(100, 200, "hi"), cheerHtml(100, 200, "YAY")]) {
+    assert.match(svg, /class="jersey"/);
+    assert.match(svg, /class="curly-w"/);
+    assert.match(svg, /class="collar"/);
+    assert.match(svg, /class="planet"/);
+    assert.match(svg, /class="star"/);
+  }
+});

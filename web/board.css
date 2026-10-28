@@ -85,7 +85,9 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .wave-home .hair { fill: #5a3620; }
 .overlay .wave-home .face { fill: #f1c9a5; }
 .overlay .wave-home .skin { fill: none; stroke: #f1c9a5; stroke-width: 1.9; }
-.overlay .wave-home .shirt { fill: #4f8fd8; }
+.overlay .wave-home .jersey { fill: #f7f7f4; stroke: #ab0003; stroke-width: .5; }   /* Nationals home whites */
+.overlay .wave-home .piping { fill: none; stroke: #ab0003; stroke-width: .45; }
+.overlay .wave-home .curly-w { fill: none; stroke: #ab0003; stroke-width: .75; }
 .overlay .wave-home .jeans { fill: none; stroke: #2c3e5c; stroke-width: 2.6; }
 .overlay .wave-home .smile { fill: none; stroke: #8a4a34; stroke-width: .45; }
 .overlay .wave-home .eye { fill: #111; }
@@ -96,7 +98,10 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .wave-home .dog .leg { fill: none; stroke: #121212; stroke-width: 1.3; }
 .overlay .wave-home .dog .nose { fill: #000; }
 .overlay .wave-home .dog .dogeye { fill: #e6ebf1; }
-.overlay .wave-home .dog .collar { fill: none; stroke: #e0453a; stroke-width: .8; }
+.overlay .wave-home .dog .collar { fill: none; stroke: #5b4ee0; stroke-width: 1.1; }   /* night sky */
+.overlay .wave-home .dog .star { fill: #fff6b0; }
+.overlay .wave-home .dog .planet circle { fill: #ffb347; }
+.overlay .wave-home .dog .planet .ring { fill: none; stroke: #8fd3ff; stroke-width: .3; }
 .overlay .wave-home .dog .tail { fill: none; stroke: #121212; stroke-width: 1.2; transform-box: fill-box; transform-origin: 0 100%;
                                  animation: rider-wave .35s ease-in-out infinite alternate; }
 .overlay .wave-home .bubble { fill: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
