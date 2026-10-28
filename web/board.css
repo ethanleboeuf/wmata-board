@@ -85,9 +85,10 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .wave-home .hair { fill: #5a3620; }
 .overlay .wave-home .face { fill: #f1c9a5; }
 .overlay .wave-home .skin { fill: none; stroke: #f1c9a5; stroke-width: 1.9; }
-.overlay .wave-home .jersey { fill: #f7f7f4; stroke: #ab0003; stroke-width: .5; }   /* Nationals home whites */
-.overlay .wave-home .piping { fill: none; stroke: #ab0003; stroke-width: .45; }
-.overlay .wave-home .curly-w { fill: none; stroke: #ab0003; stroke-width: .75; }
+.overlay .wave-home .jersey { fill: #c8102e; stroke: #7d0a1c; stroke-width: .4; }   /* Nationals red */
+.overlay .wave-home .sleeve { fill: none; stroke: #c8102e; stroke-width: 2.9; }
+.overlay .wave-home .piping { fill: none; stroke: #fff; stroke-width: .4; }
+.overlay .wave-home .curly-w { fill: none; stroke: #fff; stroke-width: .75; }
 .overlay .wave-home .jeans { fill: none; stroke: #2c3e5c; stroke-width: 2.6; }
 .overlay .wave-home .smile { fill: none; stroke: #8a4a34; stroke-width: .45; }
 .overlay .wave-home .eye { fill: #111; }

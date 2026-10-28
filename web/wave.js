@@ -28,7 +28,7 @@ export function bubbleLines(message) {
 }
 
 // Ground at y=0, him at x=0, the dog to his right looking up at him. He's in
-// a white Nationals home jersey (red piping, curly W); the dog's collar is
+// a red Nationals jersey (white piping and curly W, short sleeves); the dog's collar is
 // night sky with a star and a ringed-planet tag.
 const man = (cls, arms) => `<g class="${cls}">` +
   `<path class="jeans" d="M-1.8,-11.5 L-2.4,0 M1.8,-11.5 L2.4,0"/>` +
@@ -42,12 +42,19 @@ const man = (cls, arms) => `<g class="${cls}">` +
   `<circle class="eye" cx="-1.3" cy="-24.6" r=".42"/><circle class="eye" cx="1.3" cy="-24.6" r=".42"/>` +
   `<path class="smile" d="M-1,-22.9 Q0,-22.1 1,-22.9"/>` +
   `</g>`;
+// An arm from the shoulder (x1, y1) to the hand, its top third in a sleeve;
+// one group, so a waving arm swings its sleeve with it.
+const arm = (cls, x1, y1, x2, y2) => {
+  const sx = x1 + (x2 - x1) * 0.38, sy = y1 + (y2 - y1) * 0.38;
+  return `<g class="${cls}"><path class="skin" d="M${x1},${y1} L${x2},${y2}"/>` +
+    `<path class="sleeve" d="M${x1},${y1} L${sx.toFixed(2)},${sy.toFixed(2)}"/></g>`;
+};
 const MAN = man("man",
-  `<path class="skin" d="M3.6,-19.6 L5.6,-12.6"/>` +
-  `<path class="wave skin" d="M-3.6,-19.6 L-7.6,-25.6"/>`);   // waving away from the bubble
+  arm("still", 3.6, -19.6, 5.6, -12.6) +
+  arm("wave", -3.6, -19.6, -7.6, -25.6));   // waving away from the bubble
 const DANCER = man("man dance",                               // both arms up, pumping in turn
-  `<path class="arm left skin" d="M-3.6,-19.6 L-7.4,-27.4"/>` +
-  `<path class="arm right skin" d="M3.6,-19.6 L7.4,-27.4"/>`);
+  arm("arm left", -3.6, -19.6, -7.4, -27.4) +
+  arm("arm right", 3.6, -19.6, 7.4, -27.4));
 const DOG = `<g class="dog">` +
   `<path class="leg" d="M8.8,-3.6 L8.6,0 M10.4,-3.6 L10.6,0 M14.4,-3.6 L14.2,0 M16,-3.6 L16.4,0"/>` +
   `<path class="tail" d="M16.8,-5.6 Q19.2,-6.8 19.4,-9.4"/>` +

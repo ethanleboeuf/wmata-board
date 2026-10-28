@@ -59,5 +59,6 @@ test("he wears a Nationals jersey and the dog a space collar, morning and aftern
     assert.match(svg, /class="collar"/);
     assert.match(svg, /class="planet"/);
     assert.match(svg, /class="star"/);
+    assert.equal((svg.match(/class="sleeve"/g) || []).length, 2);
   }
 });
