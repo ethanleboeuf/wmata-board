@@ -65,14 +65,17 @@ class Landmark:
 
 
 WAVE_MESSAGE = "have a good day at work!"
+CHEER_MESSAGE = "YAYAYAYAYAY"
 
 
 @dataclass(frozen=True, slots=True)
 class Wave:
-    """Who waves her off from near home while she's riding a morning train."""
+    """Who waves her off from near home while she's riding a morning train,
+    and dances to cheer her home on an afternoon one."""
     lat: float
     lon: float
     message: str = WAVE_MESSAGE
+    cheer: str = CHEER_MESSAGE
 
 
 _DEFAULT_BBOX = (-77.122, 38.844, -76.978, 38.966)
@@ -236,7 +239,7 @@ def _map(t: Mapping[str, Any]) -> MapConfig:
         if not isinstance(w, Mapping) or not {"lat", "lon"} <= set(w):
             raise ConfigError("[map.wave] needs lat and lon")
         wave = Wave(_number(w["lat"], "[map.wave].lat"), _number(w["lon"], "[map.wave].lon"),
-                    str(w.get("message", WAVE_MESSAGE)))
+                    str(w.get("message", WAVE_MESSAGE)), str(w.get("cheer", CHEER_MESSAGE)))
 
     return MapConfig((west, south, east, north), tuple(str(x).upper() for x in labels),
                      tuple(places), tuple(landmarks), theme, wave)

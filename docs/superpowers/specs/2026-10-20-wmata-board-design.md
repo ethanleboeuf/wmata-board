@@ -312,6 +312,11 @@ From her first rides with "I'm on this one":
   (`mine`); a map train's card shows the next five stops plus any of hers
   further on (Brookland is six stops past Metro Center), with "⋯ N stops"
   for the gap, and an "All N stops" button that opens the full list.
+- **Cheered home.** While she's riding from noon on (her ride home), the
+  morning wave-off pair at `[map.wave]` dance instead for the whole ride: he
+  bounces with both arms pumping, the dog hops, confetti falls (fixed seed,
+  so a pan doesn't reshuffle it), bubble `cheer` ("YAYAYAYAYAY"). Before
+  noon it's still the wave (`wave.js` `waveMode`).
 
 ## Out of scope (for now)
 

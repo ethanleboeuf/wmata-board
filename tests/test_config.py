@@ -54,6 +54,9 @@ def test_map_wave(tmp_path):
     assert load_config(write(tmp_path, ""), environ={}).map.wave is None
     wave = load_config(write(tmp_path, "[map.wave]\nlat = 38.9\nlon = -77.1\n"), environ={}).map.wave
     assert (wave.lat, wave.lon, wave.message) == (38.9, -77.1, "have a good day at work!")
+    assert wave.cheer == "YAYAYAYAYAY"
+    wave = load_config(write(tmp_path, '[map.wave]\nlat = 38.9\nlon = -77.1\ncheer = "welcome home!"\n'), environ={}).map.wave
+    assert wave.cheer == "welcome home!"
 
 
 def test_station_codes_are_uppercased(tmp_path):

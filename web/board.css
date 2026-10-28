@@ -101,6 +101,22 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
                                  animation: rider-wave .35s ease-in-out infinite alternate; }
 .overlay .wave-home .bubble { fill: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 .overlay .wave-home text { font-size: 13px; font-weight: 800; fill: #1a1f27; }
+/* Her ride home: he bounces with both arms pumping, the dog hops, confetti falls. */
+.overlay .cheer .dance { transform-box: fill-box; transform-origin: 50% 100%; animation: cheer-bounce .32s ease-in-out infinite alternate; }
+.overlay .cheer .arm { transform-box: fill-box; animation: cheer-arm .32s ease-in-out infinite alternate; }
+.overlay .cheer .arm.left { transform-origin: 100% 100%; }
+.overlay .cheer .arm.right { transform-origin: 0 100%; animation-direction: alternate-reverse; }
+.overlay .cheer .dog { transform-box: fill-box; transform-origin: 50% 100%; animation: cheer-hop .26s ease-out infinite alternate; }
+.overlay .cheer .dog .tail { animation-duration: .16s; }
+.overlay .cheer .confetti { animation: confetti-fall linear infinite; }
+.overlay .cheer .confetti rect { transform-box: fill-box; transform-origin: 50% 50%; animation: confetti-spin linear infinite; }
+@keyframes cheer-bounce { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-2.2px) rotate(4deg); } }
+@keyframes cheer-arm { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+@keyframes cheer-hop { from { transform: translateY(0); } to { transform: translateY(-3px) rotate(-6deg); } }
+@keyframes confetti-fall { 0% { transform: translate(0, 0); opacity: 0; } 8%, 85% { opacity: 1; }
+                           100% { transform: translate(var(--drift), 90px); opacity: 0; } }
+@keyframes confetti-spin { from { transform: rotate(0deg) scaleX(1); } 50% { transform: rotate(180deg) scaleX(.3); }
+                           to { transform: rotate(360deg) scaleX(1); } }
 @keyframes rider-bob { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 @keyframes rider-wave { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } }
 @keyframes wave-arm { from { transform: rotate(0deg); } to { transform: rotate(-35deg); } }

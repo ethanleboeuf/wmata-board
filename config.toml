@@ -32,10 +32,11 @@ lat = 38.92711
 lon = -77.01417
 style = "hospital"
 
-[map.wave]                    # while she's on a morning train: waving her off from home
+[map.wave]                    # while she rides: waving her off from home (mornings), dancing her home (afternoons)
 lat = 38.8912                 # 2201 Wilson Blvd
 lon = -77.0862
 message = "have a good day at work!"
+cheer = "YAYAYAYAYAY"
 
 [server]
 host = "127.0.0.1"
