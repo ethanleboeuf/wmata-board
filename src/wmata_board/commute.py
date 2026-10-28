@@ -115,6 +115,17 @@ def commute_stations(cfg: CommuteConfig) -> frozenset[str]:
     return frozenset({cfg.home, *cfg.transfer, cfg.shuttle_stop, cfg.evening_from})
 
 
+def get_off_stations(cfg: CommuteConfig, now_local: datetime) -> frozenset[str]:
+    """Where she'd step off whatever commute train she's on now: mornings the
+    OR/SV at Metro Center or the Red at Brookland, afternoons the Red at Metro
+    Center or the OR/SV at Court House. Ends a map train's ride (the phone)."""
+    if now_local.weekday() >= 5:
+        return frozenset()
+    if now_local.hour < 12:
+        return frozenset({cfg.transfer[0], cfg.shuttle_stop})
+    return frozenset({cfg.transfer[1], cfg.home})
+
+
 def commute_mode(cfg: CommuteConfig, now_local: datetime) -> str | None:
     if now_local.weekday() >= 5:
         return None

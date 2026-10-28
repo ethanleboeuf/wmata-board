@@ -83,8 +83,14 @@ test("easter-egg ride plan: switches at Metro Center, gets off at the end", asyn
   assert.deepEqual(ridePlan(legs, [t1, t2], 900), { trips: ["or", "rd"], switch_at: 1600, until: 2620 });
   // already past the transfer: straight onto the second train
   assert.equal(ridePlan(legs, [{ stops: [] }, t2], 1700).switch_at, 1700);
-  // a map train, or nothing known: one trip for up to 3 h
-  assert.deepEqual(ridePlan([{ trip: "x", to: null }], [null], 10), { trips: ["x"], switch_at: null, until: 10 + RIDE_MAX_S });
+  // a map train: off at the first station she gets off at (the server marks them), else the end of its run
+  const map = [{ trip: "x", to: null }];
+  const rd = { stops: [{ code: "A01", t: 1000 }, { code: "B05", t: 1500, off: true }, { code: "B07", t: 1800, off: true }, { code: "B11", t: 2400 }] };
+  assert.equal(ridePlan(map, [rd], 900).until, 1620);
+  assert.equal(ridePlan(map, [{ stops: rd.stops.map(s => ({ ...s, off: false })) }], 900).until, 2520);
+  assert.equal(ridePlan(map, [{ stops: [{ code: "B11", t: null }] }], 900).until, 900 + RIDE_MAX_S);
+  // nothing known: one trip for up to 3 h
+  assert.deepEqual(ridePlan(map, [null], 10), { trips: ["x"], switch_at: null, until: 10 + RIDE_MAX_S });
 });
 
 test("station picker: search, nearest, rows", async () => {

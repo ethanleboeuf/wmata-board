@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .board import build_board
-from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_stations, live_updates
+from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_stations, get_off_stations, live_updates
 from .config import Config
 from .feeds import build_feeds
 from .poller import Feed, Poller
@@ -224,7 +224,8 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         detail = trip_detail(trip_id, live=live, scheduled=scheduled,
                              names=station_names(net_feed.state.value if net_feed else None, schedule),
                              positions=feeds["positions"].state.value, now=now, tz=tz,
-                             mine=commute_stations(config.commute) if config.commute else ())
+                             mine=commute_stations(config.commute) if config.commute else (),
+                             off=get_off_stations(config.commute, datetime.fromtimestamp(now, tz)) if config.commute else ())
         if detail is None:
             return JSONResponse({"error": "unknown trip"}, status_code=404, headers=NO_STORE)
         return JSONResponse(detail, headers=NO_STORE)

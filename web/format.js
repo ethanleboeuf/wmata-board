@@ -94,13 +94,18 @@ export function delayText(delayS) {
 export const RIDE_MAX_S = 3 * 3600;
 const stopT = (trip, code) => trip?.stops?.find(s => s.code === code)?.t;
 
+// Where a map train (no `to`) drops her: the first stop she'd get off at now
+// (the server marks them `off`), else the end of its run.
+const offT = trip => (trip?.stops?.find(s => s.off && s.t) ?? trip?.stops?.at(-1))?.t;
+
 // A ride from a card's legs ([{trip, to}]) and their fetched trips (null when a
 // fetch failed), in epoch seconds. It switches trains when the first reaches
 // the transfer (now, if it already has), and ends 2 min after the last leg arrives.
 export function ridePlan(legs, trips, nowS) {
   const first = trips[0], last = trips[legs.length - 1];
   const transfer = legs.length > 1 && first ? (stopT(first, legs[0].to) ?? nowS) : null;
-  const end = legs.at(-1)?.to ? stopT(last, legs.at(-1).to) : null;
+  const to = legs.at(-1)?.to;
+  const end = !legs.length ? null : to ? stopT(last, to) : offT(last);
   return {
     trips: legs.map(l => l.trip),
     switch_at: transfer,

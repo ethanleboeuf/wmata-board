@@ -45,6 +45,14 @@ def test_her_stations_are_marked():
     assert not any(s["mine"] for s in detail()["stops"])
 
 
+def test_get_off_stations_are_marked():
+    upd = TripUpdates(0, {"sv1": LIVE})
+    d = trip_detail("sv1", live=upd, scheduled=[SCHED], names=NAMES, positions=POS, now=at("7:30"), tz=ET,
+                    off={"C01"})
+    assert [s["off"] for s in d["stops"]] == [False, True, False, False]
+    assert not any(s["off"] for s in detail()["stops"])
+
+
 def test_passed_stops_drop():
     assert [s["code"] for s in detail(now="7:45")["stops"]] == ["C01", "D01", "G05"]
 

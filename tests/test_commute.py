@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, Rebooking, RideMemory, build_commute, commute_mode, departures,
+from wmata_board.commute import (AM, PM, NOTICE_UNAVAILABLE, Rebooking, RideMemory, build_commute, commute_mode, departures, get_off_stations,
                                  next_slot, plan_from_hospital, plan_from_station, plan_morning,
                                  plan_to_station)
 from wmata_board.config import CommuteConfig
@@ -362,3 +362,10 @@ def test_commute_alerts_cover_red_and_expire():
     body = build_commute(CFG, schedule=FeedState(value=schedule_of(MORNING)), updates=FeedState(), tz=ET,
                          now=at("7:30"), now_mono=100.0, wall_now=at("7:30"), incidents=fresh)
     assert [a["id"] for a in body["alerts"]] == ["1", "2"]
+
+
+def test_get_off_stations_by_time_of_day():
+    on = lambda d, h: get_off_stations(CFG, datetime(2026, 10, d, h, 0, tzinfo=ET))
+    assert on(22, 8) == on(22, 11) == {"C01", "B05"}    # morning: off the OR/SV at Metro Center, the Red at Brookland
+    assert on(22, 12) == on(22, 17) == {"A01", "K01"}   # evening: off the Red at Metro Center, the OR/SV at Court House
+    assert on(24, 8) == frozenset()                     # a weekend: no commute

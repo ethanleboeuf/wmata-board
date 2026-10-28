@@ -5,7 +5,8 @@ falls back to the timetable, which only holds the commute stations (good
 enough to show a commute leg). WMATA's trip updates carry no delay field, so
 lateness is the live time minus the timetable time at the first remaining
 stop both know -- a commute station -- and is omitted when there is none.
-Her commute stations (`mine`) are marked, so the card can always show them.
+Her commute stations (`mine`) are marked, so the card can always show them,
+and where she'd get off right now (`off`), so a map train's ride can end there.
 """
 
 from __future__ import annotations
@@ -36,7 +37,8 @@ def _cars(positions: PositionsSnapshot | None, trip_id: str) -> int | None:
 
 def trip_detail(trip_id: str, *, live: TripUpdates | None, scheduled: list[Trip],
                 names: Mapping[str, str], positions: PositionsSnapshot | None,
-                now: float, tz: ZoneInfo, mine: Collection[str] = ()) -> dict | None:
+                now: float, tz: ZoneInfo, mine: Collection[str] = (),
+                off: Collection[str] = ()) -> dict | None:
     """None when neither source knows the trip (or it was cancelled)."""
     sched = next((t for t in scheduled if t.id == trip_id), None)
     lt = live.trips.get(trip_id) if live else None
@@ -64,5 +66,6 @@ def trip_detail(trip_id: str, *, live: TripUpdates | None, scheduled: list[Trip]
         "id": trip_id, "line": line, "destination": destination,
         "cars": _cars(positions, trip_id), "delay_s": delay, "live": is_live,
         "stops": [{"code": c, "name": names.get(c, c), "time": clock(t, tz) if t is not None else None,
-                   "t": round(t) if t is not None else None, "mine": c in mine} for c, t in upcoming],
+                   "t": round(t) if t is not None else None, "mine": c in mine, "off": c in off}
+                  for c, t in upcoming],
     }
