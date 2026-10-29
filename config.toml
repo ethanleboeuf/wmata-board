@@ -35,8 +35,8 @@ style = "hospital"
 [map.wave]                    # while she rides: waving her off from home (mornings), dancing her home (afternoons)
 lat = 38.8912                 # 2201 Wilson Blvd
 lon = -77.0862
-message = "have a good day at work!"
-cheer = "YAYAYAYAYAY"
+message = "have a good day at work!"   # defaults: change them any time from kiosk-selector
+cheer = "YAYAYAYAYAY"                 # (:8445, "Kara's messages"); kept in data/messages.json
 
 [server]
 host = "127.0.0.1"

@@ -23,6 +23,7 @@ from .board import build_board
 from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_stations, get_off_stations, live_updates
 from .config import Config
 from .feeds import build_feeds
+from .messages import Messages, from_tailnet, load_messages, parse_messages, save_messages
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
 from .ride import load_ride, moved_ride, parse_ride, ride_trip, ride_trips, save_ride
@@ -102,6 +103,10 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     ride_path = data_dir / "ride.json"
     app.state.ride = load_ride(ride_path)
     ride_memory = RideMemory()   # the ride's passed stops, for its pinned commute row
+    wave = config.map.wave
+    default_messages = Messages(wave.message, wave.cheer) if wave else None
+    messages_path = data_dir / "messages.json"
+    app.state.messages = load_messages(messages_path, default_messages) if wave else None
 
     async def want(*names: str) -> None:
         """Mark feeds wanted; if one is due (about to fetch, or fetching now --
@@ -148,7 +153,32 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "error": st.error_kind,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
             "ride": ride_trip(app.state.ride, wall_clock()),
+            "wave": app.state.messages and app.state.messages.as_json(),
         }, headers=NO_STORE)
+
+    # What the man by home says (messages.py): read by anyone, set only from the Pi.
+    def messages_body() -> JSONResponse:
+        return JSONResponse({"messages": app.state.messages.as_json(),
+                             "defaults": default_messages.as_json()}, headers=NO_STORE)
+
+    @app.get("/api/messages")
+    async def get_messages():
+        if app.state.messages is None:
+            return JSONResponse({"error": "no [map.wave] in config"}, status_code=404, headers=NO_STORE)
+        return messages_body()
+
+    @app.put("/api/messages")
+    async def put_messages(request: Request):
+        if from_tailnet(request.headers):
+            return JSONResponse({"error": "set these from kiosk-selector"}, status_code=403, headers=NO_STORE)
+        if app.state.messages is None:
+            return JSONResponse({"error": "no [map.wave] in config"}, status_code=404, headers=NO_STORE)
+        try:
+            app.state.messages = parse_messages(await request.json(), app.state.messages, default_messages)
+        except ValueError as err:
+            return JSONResponse({"error": str(err)}, status_code=400, headers=NO_STORE)
+        save_messages(messages_path, app.state.messages)
+        return messages_body()
 
     # The easter egg: the phone's "I'm on this one" (see ride.py).
     def ride_body() -> JSONResponse:
@@ -245,8 +275,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "places": [{"name": p.name, "lat": p.lat, "lon": p.lon} for p in m.places],
             "landmarks": [{"name": x.name, "lat": x.lat, "lon": x.lon, "style": x.style} for x in m.landmarks],
             "theme": m.theme,
-            "wave": m.wave and {"lat": m.wave.lat, "lon": m.wave.lon, "message": m.wave.message,
-                              "cheer": m.wave.cheer},
+            "wave": m.wave and {"lat": m.wave.lat, "lon": m.wave.lon, **app.state.messages.as_json()},
         }, headers={"Cache-Control": "max-age=600"})
 
     @app.get("/healthz")

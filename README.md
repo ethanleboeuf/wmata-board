@@ -40,6 +40,16 @@ Settings live in `[commute]` in
 `data/schedule.json` and rebuilt daily. Rows marked `sched` come from the
 timetable because live predictions don't reach that far ahead yet.
 
+## Wave messages
+
+While she rides, the man by home says `[map.wave] message` (mornings) and
+`cheer` (afternoons). Change them any time from kiosk-selector
+(https://raspberrypi.tail7b0b4d.ts.net:8445, "Kara's messages"): it calls
+`PUT /api/messages` on localhost. That endpoint refuses anything that came through
+`tailscale serve`, so the phone link can't change them. Maps pick up the new
+words within seconds; they're kept in `data/messages.json`, and a blank one goes
+back to the config's.
+
 ## Pi setup
 
 ```

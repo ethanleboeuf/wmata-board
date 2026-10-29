@@ -152,7 +152,8 @@ def test_positions_before_first_fetch(app):
     with TestClient(app) as c:
         body = c.get("/api/positions").json()
     assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
-                    "error": None, "vehicles": [], "ride": None}
+                    "error": None, "vehicles": [], "ride": None,
+                    "wave": {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}}
 
 
 def test_network_endpoint(app, fixtures):
@@ -373,3 +374,29 @@ def test_board_for_another_station(app, fixtures):
         assert b["station"] == {"code": "A01", "name": "Metro Center", "home": False}
         assert c.get("/api/board?station=Z99").status_code == 404
         assert c.get("/api/board?station=k01").status_code == 422
+
+
+def test_messages_are_set_from_the_pi_only(fixtures, tmp_path):
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
+    make = lambda: create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
+                              start_polling=False, clock=clock, wall_clock=lambda: 0.0, data_dir=tmp_path)
+    defaults = {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}
+    with TestClient(make()) as c:
+        assert c.get("/api/messages").json() == {"messages": defaults, "defaults": defaults}
+        # through tailscale serve (the phone link): refused
+        r = c.put("/api/messages", json={"message": "hi"}, headers={"X-Forwarded-For": "100.64.0.9"})
+        assert r.status_code == 403
+        r = c.put("/api/messages", json={"cheer": "hi"}, headers={"Tailscale-User-Login": "her@example.com"})
+        assert r.status_code == 403
+        assert c.put("/api/messages", json={"message": "x" * 61}).status_code == 400
+        assert c.put("/api/messages", json={"message": 3}).status_code == 400
+        assert c.put("/api/messages", json={}).status_code == 400
+        r = c.put("/api/messages", json={"message": "  love you,\n  go get 'em  "})
+        assert r.json()["messages"] == {"message": "love you, go get 'em", "cheer": "YAYAYAYAYAY"}
+        assert c.get("/api/positions").json()["wave"]["message"] == "love you, go get 'em"
+    # a restart keeps it; a blank one goes back to the config's
+    with TestClient(make()) as c:
+        assert c.get("/api/messages").json()["messages"]["message"] == "love you, go get 'em"
+        assert c.put("/api/messages", json={"message": ""}).json()["messages"] == defaults

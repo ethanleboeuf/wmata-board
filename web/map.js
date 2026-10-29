@@ -228,6 +228,11 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         riding = body.ride ?? null;
         const wave = net.wave ? waveMode(riding) : null;
         if (wave !== waving) { waving = wave; scheduleDraw(); }
+        const said = body.wave;   // his words, set from kiosk-selector since the page loaded
+        if (said && net.wave && (said.message !== net.wave.message || said.cheer !== net.wave.cheer)) {
+          Object.assign(net.wave, said);
+          if (waving) scheduleDraw();
+        }
         if (body.feed_timestamp !== null) {
           const vs = [];
           info.clear();
