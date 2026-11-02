@@ -120,7 +120,13 @@ export function harvestLayer() {
       `<div class="sprite">${kind === "turkey" ? TURKEY : CORNUCOPIA}</div></div>`).join("") +
     GAG;
   const gag = div.querySelector(".gag");
-  const play = () => { gag.classList.remove("play"); void gag.offsetWidth; gag.classList.add("play"); };
+  const walking = on => gag.classList.toggle("walking", on);   // the cornucopia walks in and out, not while holding
+  const play = () => {
+    gag.classList.remove("play"); void gag.offsetWidth; gag.classList.add("play");
+    walking(true);
+    setTimeout(() => walking(false), 1600);
+    setTimeout(() => walking(true), 7400);
+  };
   setTimeout(play, GAG_FIRST_MS);
   setInterval(play, GAG_EVERY_MS);
   return div;
