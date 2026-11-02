@@ -79,7 +79,7 @@ class Wave:
 
 
 _DEFAULT_BBOX = (-77.122, 38.844, -76.978, 38.966)
-THEMES = ("", "halloween")   # "" is the everyday Board-navy map
+THEMES = ("", "halloween", "thanksgiving")   # "" is the everyday Board-navy map
 
 
 @dataclass(frozen=True, slots=True)

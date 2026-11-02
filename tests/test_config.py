@@ -48,6 +48,8 @@ def test_map_theme(tmp_path):
     assert load_config(write(tmp_path, ""), environ={}).map.theme == ""
     config = load_config(write(tmp_path, '[map]\ntheme = "Halloween"\n'), environ={})
     assert config.map.theme == "halloween"
+    config = load_config(write(tmp_path, '[map]\ntheme = "thanksgiving"\n'), environ={})
+    assert config.map.theme == "thanksgiving"
 
 
 def test_map_wave(tmp_path):

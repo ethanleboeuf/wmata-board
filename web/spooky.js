@@ -119,3 +119,9 @@ export const WITCH = `<g transform="scale(2.4) translate(-1.2,4.2)"><g class="bo
   `<path class="hat" d="M7.2,-11.7 L10.4,-11.7 L9.6,-13.4 Q9.6,-15.4 11.4,-15.8 Q10,-14.6 9.9,-13 Z"/>` +
   `<path class="hatbrim" d="M6.4,-11.6 L11.2,-11.6"/>` +
   `</g></g>`;
+
+export const PUMPKIN_GLOW = `<radialGradient id="pumpglow"><stop offset="0" stop-color="#ff8a2a" stop-opacity=".6"/>` +
+  `<stop offset="1" stop-color="#ff8a2a" stop-opacity="0"/></radialGradient>`;
+
+export const HALLOWEEN = { land: SPOOKY_LAND, style: spookyStyle, layer: spookLayer, defs: PUMPKIN_GLOW,
+                           besideHome: jackOLantern, onLandmark: cobweb, rider: WITCH };

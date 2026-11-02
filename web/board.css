@@ -159,6 +159,55 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 @keyframes spook-bob { from { transform: translateY(0); } to { transform: translateY(-14px); } }
 @keyframes spook-swoop { from { transform: translateY(-10px); } to { transform: translateY(10px); } }
 @keyframes spook-flap { from { transform: scaleY(1); } to { transform: scaleY(.55); } }
+/* Thanksgiving theme ([map] theme = "thanksgiving"; the map container gets .thanksgiving). */
+.mapbox.thanksgiving, .phonemap.thanksgiving { background: #1a120c; }
+.thanksgiving .overlay .place { fill: #6e4a2a; }
+.thanksgiving .overlay .labels text, .thanksgiving .overlay .landmark text, .thanksgiving .overlay .home,
+.thanksgiving .overlay .live { stroke: #1a120c; }
+.thanksgiving .overlay .labels text { fill: #d9c3a0; }
+.thanksgiving .overlay .home { fill: #f2c46a; }
+.thanksgiving .pulse { border-color: #f2a541; }
+.thanksgiving .overlay .pie .steam { fill: none; stroke: #f3e6d0; stroke-width: 1.2; stroke-linecap: round;
+                                     animation: pie-steam 3s ease-in-out infinite; }
+.thanksgiving .overlay .pie .s2 { animation-delay: -1s; }
+.thanksgiving .overlay .pie .s3 { animation-delay: -2s; }
+.overlay .rider .coat { fill: #6b4a32; }
+.overlay .rider .collar { fill: #fbf6ea; }
+.overlay .rider .phat { fill: #2a2320; stroke: #8a7a68; stroke-width: .3; }
+.overlay .rider .pband { fill: #111; }
+.overlay .rider .buckle { fill: none; stroke: #f3c04a; stroke-width: .5; }
+.overlay .rider .pbrim { fill: none; stroke: #2a2320; stroke-width: .7; }
+.harvest { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.harvest .moon { position: absolute; right: 12px; top: 60px; }
+.harvest .walk { position: absolute; left: 0; width: 100%; animation: spook-right linear infinite; }
+.harvest .walk.cornucopia { animation-name: spook-left; }
+.harvest .sprite { display: inline-block; animation: harvest-waddle .9s ease-in-out infinite alternate; }
+.harvest .walk.cornucopia .sprite { animation-duration: .7s; }
+.harvest .leg { fill: none; stroke: #e0a23a; stroke-width: 2; stroke-linecap: round;
+                transform-box: fill-box; transform-origin: 50% 0; animation: harvest-step .45s ease-in-out infinite alternate; }
+.harvest .cornucopia .leg { stroke: #7a4f22; }
+.harvest .leg.step2 { animation-direction: alternate-reverse; }
+.harvest .tbody { fill: #6b3d1f; }
+.harvest .twing { fill: #4e2b14; }
+.harvest .thead { fill: #b07a4c; }
+.harvest .neck { fill: none; stroke: #9a663c; stroke-width: 4.5; stroke-linecap: round; }
+.harvest .beak { fill: #f2b134; }
+.harvest .wattle { fill: #d33b2c; }
+.harvest .head { animation: harvest-peck .45s ease-in-out infinite alternate; }
+.harvest .tail { transform-box: fill-box; transform-origin: 50% 100%; animation: harvest-fan 1.8s ease-in-out infinite alternate; }
+.harvest .horn { fill: #c98a3e; stroke: #7a4f22; stroke-width: 1.2; }
+.harvest .weave { fill: none; stroke: #8f5d2a; stroke-width: 1.1; }
+.harvest .mouth { fill: #4a2c12; stroke: #7a4f22; stroke-width: 1.2; }
+.harvest .fall { position: absolute; top: 0; height: 100%; width: 0; animation: harvest-fall linear infinite; }
+.harvest .sway { opacity: .7; animation: harvest-sway 4s ease-in-out infinite alternate; }
+@keyframes harvest-waddle { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-2px); } }
+@keyframes harvest-step { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+@keyframes harvest-peck { from { transform: translate(0, 0); } to { transform: translate(2.5px, 1px); } }
+@keyframes harvest-fan { from { transform: scale(.94); } to { transform: scale(1.04); } }
+@keyframes harvest-fall { from { transform: translateY(-6%); } to { transform: translateY(104%); } }
+@keyframes harvest-sway { from { transform: translateX(0) rotate(-40deg); } to { transform: translateX(var(--drift)) rotate(50deg); } }
+@keyframes pie-steam { 0% { opacity: 0; transform: translateY(2px); } 40% { opacity: .65; }
+                       100% { opacity: 0; transform: translateY(-5px); } }
 .pulse { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 3px solid #fff;
          border-radius: 50%; animation: pulse 2.4s ease-out infinite; pointer-events: none; }
 @keyframes pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }

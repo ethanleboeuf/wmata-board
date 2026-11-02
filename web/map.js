@@ -6,11 +6,12 @@
 // /api/positions names as `ride` gets a little rider on top (the easter egg).
 // While she rides, someone by home waves her off (mornings) or dances her
 // home in confetti (afternoons) (wave.js).
-// A config theme (`net.theme`) can dress all of it up; see spooky.js.
+// A config theme (`net.theme`) can dress all of it up; see spooky.js and harvest.js.
 import { LINE_COLORS, LINE_LETTER, escapeHtml, liveLabel } from "./format.js";
 import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
          mercator, unmercator, Glider } from "./track.js";
-import { SPOOKY_LAND, spookyStyle, spookLayer, jackOLantern, cobweb, WITCH } from "./spooky.js";
+import { HALLOWEEN } from "./spooky.js";
+import { THANKSGIVING } from "./harvest.js";
 import { waveMode, waveHtml, cheerHtml } from "./wave.js";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -19,6 +20,7 @@ const LANE = { RD: 0, OR: -0.5, SV: 0.5, BL: 1.5, GR: -0.5, YL: 0.5 };
 const ORDER = ["RD", "GR", "YL", "BL", "OR", "SV"];
 const DARK_TEXT = new Set(["OR", "SV", "YL"]);
 const LAND = "#0f151d";
+const THEMES = { halloween: HALLOWEEN, thanksgiving: THANKSGIVING };
 const POSITIONS_MS = 5000;
 const POSITIONS_STALE_MS = 120000;   // no good /api/positions for this long -> fade trains
 const FETCH_TIMEOUT_MS = 8000;       // a hung request must never stall a poll loop
@@ -96,10 +98,10 @@ function badge(line) {
 
 export async function createMap(el, { interactive = false, fit = "cover", padding = null } = {}) {
   const [net, baseStyle] = await Promise.all([getJson("/api/network"), loadStyle()]);
-  const spooky = net.theme === "halloween";
-  const style = spooky ? spookyStyle(baseStyle) : baseStyle;
-  const land = spooky ? SPOOKY_LAND : LAND;
-  el.classList.toggle("halloween", spooky);
+  const theme = THEMES[net.theme] || null;
+  const style = theme ? theme.style(baseStyle) : baseStyle;
+  const land = theme ? theme.land : LAND;
+  for (const name of Object.keys(THEMES)) el.classList.toggle(name, name === net.theme);
   if (!window.__pmtilesProtocol) {
     window.__pmtilesProtocol = new pmtiles.Protocol();
     maplibregl.addProtocol("pmtiles", window.__pmtilesProtocol.tile);
@@ -127,12 +129,11 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     `<stop offset="1" stop-color="${LINE_COLORS[l][0]}" stop-opacity="0"/></radialGradient>`).join("")}` +
     `<radialGradient id="hosp"><stop offset="0" stop-color="#ff8a9b" stop-opacity=".55"/>` +
     `<stop offset="1" stop-color="#ff8a9b" stop-opacity="0"/></radialGradient>` +
-    `<radialGradient id="pumpglow"><stop offset="0" stop-color="#ff8a2a" stop-opacity=".6"/>` +
-    `<stop offset="1" stop-color="#ff8a2a" stop-opacity="0"/></radialGradient></defs>` +
+    (theme ? theme.defs : "") + `</defs>` +
     `<g class="static"></g><g class="trains"></g>` +
     `<text class="live" x="24" y="44"><tspan class="dot" fill="#3ddc84">●</tspan> <tspan class="lbl"></tspan></text>`;
   el.appendChild(svg);
-  if (spooky) el.insertBefore(spookLayer(), svg);   // ghosts drift under the lanes and trains
+  if (theme) el.insertBefore(theme.layer(), svg);   // ghosts or turkeys go under the lanes and trains
   const pulse = document.createElement("div");
   pulse.className = "pulse";
   el.appendChild(pulse);
@@ -184,7 +185,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="26" fill="url(#hosp)"/>` +
         `<rect x="${(x - 11).toFixed(1)}" y="${(y - 11).toFixed(1)}" width="22" height="22" rx="6" fill="#ff8a9b" stroke="${land}" stroke-width="2.5"/>` +
         `<path d="M${x.toFixed(1)},${(y - 6).toFixed(1)} V${(y + 6).toFixed(1)} M${(x - 6).toFixed(1)},${y.toFixed(1)} H${(x + 6).toFixed(1)}" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>` +
-        (spooky ? cobweb(x, y) : "") +
+        (theme ? theme.onLandmark(x, y) : "") +
         `<g class="landmark"><text x="${x.toFixed(1)}" y="${(y + 31).toFixed(1)}">${escapeHtml(first)}</text>` +
         (rest.length ? `<text x="${x.toFixed(1)}" y="${(y + 47).toFixed(1)}">${escapeHtml(rest.join(" "))}</text>` : "") + `</g>`);
     }
@@ -192,7 +193,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       const [x, y] = project(home.lon, home.lat);
       out.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" fill="${land}" stroke="#fff" stroke-width="3.5"/>` +
         `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#fff"/>` +
-        (spooky ? jackOLantern(x + 10, y - 36) : "") +   // beside home: trains stopped there would hide it
+        (theme ? theme.besideHome(x + 10, y - 36) : "") +   // beside home: trains stopped there would hide it
         `<text class="home" x="${(x - 18).toFixed(1)}" y="${(y - 22).toFixed(1)}" text-anchor="end">${escapeHtml(home.name.toUpperCase())}</text>`);
       pulse.style.left = `${x}px`;
       pulse.style.top = `${y}px`;
@@ -291,7 +292,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
       const on = riding !== null && info.get(v.id)?.trip_id === riding;
       if (on && !e.rider) {
         e.rider = svgEl("g", { class: "rider" });
-        e.rider.innerHTML = spooky ? WITCH : RIDER;
+        e.rider.innerHTML = theme ? theme.rider : RIDER;
         e.g.appendChild(e.rider);
       } else if (!on && e.rider) { e.rider.remove(); e.rider = null; }
       if (on && gTrains.lastChild !== e.g) gTrains.appendChild(e.g);   // she rides on top
