@@ -203,6 +203,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .sway { opacity: .7; animation: harvest-sway 4s ease-in-out infinite alternate; }
 /* The football gag (harvest.js GAG): one 10 s take, replayed by toggling .play. */
 .harvest .gag { position: absolute; left: 6%; top: 68%; width: 240px; height: 100px; opacity: 0; }
+.phonemap .harvest .gag { top: 40%; }   /* the phone's bottom sheet covers the lower 38% */
 .harvest .gag.play { animation: gag-scene 10s linear both; }
 .harvest .gag > div { position: absolute; }
 .harvest .gag-corn { left: 150px; top: 50px; width: 64px; height: 50px; }
