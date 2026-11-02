@@ -68,8 +68,8 @@ const CORNUCOPIA = `<svg viewBox="0 0 64 50" width="64" height="50">` +
   `<path d="M8,24.6 Q6.8,30 8,35.4 M14,24.6 Q15.2,30 14,35.4" fill="none" stroke="#c45f12" stroke-width="1"/>` +
   `<path d="M11,24.4 L12,21.6" stroke="#4f8a2e" stroke-width="1.8" stroke-linecap="round"/>` +
   `<path d="M20.5,28 Q26,25 25,32 Q21,32 20.5,28 Z" fill="#5f9a3a"/>` +
-  `<circle cx="38" cy="18" r="2.2" fill="#fff"/><circle cx="44" cy="16.6" r="2" fill="#fff"/>` +
-  `<circle cx="37.3" cy="18.2" r="1.1" fill="#111"/><circle cx="43.3" cy="16.8" r="1" fill="#111"/></svg>`;
+  `<circle cx="38" cy="18" r="2.2" fill="#fff"/><circle cx="37.3" cy="18.2" r="1.1" fill="#111"/>` +
+  `<g class="wink"><circle cx="44" cy="16.6" r="2" fill="#fff"/><circle cx="43.3" cy="16.8" r="1" fill="#111"/></g></svg>`;
 // [kind, top %, seconds to cross, delay s]; negative delays start them mid-walk.
 const WALKERS = [
   ["turkey", 22, 90, -15], ["turkey", 56, 110, -70], ["turkey", 82, 100, -40],
@@ -90,6 +90,22 @@ const LEAF_COLORS = ["#c8322b", "#e0a23a", "#d0601e", "#b5452a", "#e8b84a"];
 const FALLING = [[8, 26, -3, 60], [24, 31, -17, -40], [41, 23, -9, 50], [57, 29, -22, -60],
                  [72, 25, -12, 45], [88, 33, -27, -50], [33, 35, -30, 30]];
 
+// The Lucy-and-the-football gag, every few minutes in the lower left: a
+// cornucopia holds a football for a turkey, yanks it away at the last second,
+// and the turkey flips onto its back. Choreographed in board.css (gag-*).
+const GAG_FIRST_MS = 15000, GAG_EVERY_MS = 180000;
+const FOOTBALL = `<svg class="holder" viewBox="0 0 34 26" width="34" height="26">` +
+  `<g transform="rotate(-15 8 15)"><ellipse cx="8" cy="15" rx="5.5" ry="10" fill="#8a4a22" stroke="#4a2810" stroke-width="1"/>` +
+  `<path d="M8,10 V20 M6.4,12 H9.6 M6.4,14.6 H9.6 M6.4,17.2 H9.6" stroke="#fbf6ea" stroke-width=".9" fill="none"/></g>` +
+  `<path d="M33,7 Q22,2 10,4.6" fill="none" stroke="#c98a3e" stroke-width="2.2" stroke-linecap="round"/>` +
+  `<circle cx="9.6" cy="4.8" r="2.3" fill="#c98a3e"/></svg>`;
+const PUFF = `<svg viewBox="-3 -7 6 14" width="6" height="14"><path d="M0,-7 Q3,0 0,7 Q-3,0 0,-7 Z" fill="#b5452a"/></svg>`;
+const GAG = `<div class="gag">` +
+  `<div class="gag-corn"><div class="sprite">${CORNUCOPIA}</div>${FOOTBALL}</div>` +
+  `<div class="gag-turkey">${TURKEY}</div>` +
+  `<div class="gag-puff p1">${PUFF}</div><div class="gag-puff p2">${PUFF}</div><div class="gag-puff p3">${PUFF}</div>` +
+  `<div class="gag-bubble">AAUGH!</div></div>`;
+
 export function harvestLayer() {
   const div = document.createElement("div");
   div.className = "harvest";
@@ -101,7 +117,12 @@ export function harvestLayer() {
       `</div></div>`).join("") +
     WALKERS.map(([kind, top, secs, delay]) =>
       `<div class="walk ${kind}" style="top:${top}%;animation-duration:${secs}s;animation-delay:${delay}s">` +
-      `<div class="sprite">${kind === "turkey" ? TURKEY : CORNUCOPIA}</div></div>`).join("");
+      `<div class="sprite">${kind === "turkey" ? TURKEY : CORNUCOPIA}</div></div>`).join("") +
+    GAG;
+  const gag = div.querySelector(".gag");
+  const play = () => { gag.classList.remove("play"); void gag.offsetWidth; gag.classList.add("play"); };
+  setTimeout(play, GAG_FIRST_MS);
+  setInterval(play, GAG_EVERY_MS);
   return div;
 }
 
