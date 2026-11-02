@@ -42,7 +42,7 @@ const f = n => n.toFixed(1);
 const fan = (ry, fill) => [-72, -48, -24, 0, 24, 48, 72].map(a =>
   `<ellipse cx="18" cy="${f(29 - ry)}" rx="4.6" ry="${ry}" fill="${fill}" ` +
   `transform="rotate(${a} 18 29)"/>`).join("");
-const TURKEY = `<svg viewBox="0 0 54 54" width="54" height="54">` +
+const TURKEY = `<svg viewBox="-18 -8 74 62" width="74" height="62">`   // room for the full fan +
   `<g class="tail">${fan(17, "#b5452a")}${fan(13, "#e0a23a")}${fan(9, "#7a4a26")}</g>` +
   `<path class="leg step" d="M21,39 L20,50 M17.6,50 L22.4,50"/>` +
   `<path class="leg step2" d="M27,39 L28,50 M25.6,50 L30.4,50"/>` +
