@@ -178,9 +178,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .rider .buckle { fill: none; stroke: #f3c04a; stroke-width: .5; }
 .overlay .rider .pbrim { fill: none; stroke: #2a2320; stroke-width: .7; }
 .harvest { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.harvest .moon { position: absolute; right: 12px; top: -8px; }   /* up in the corner, clear of the lines */
-.phonemap .harvest .moon { right: 186px; }   /* beside the phone's Commute and recenter buttons */
-@media (max-width: 600px) { .phonemap .harvest .moon { right: 2px; top: 52px; transform: scale(.7); transform-origin: top right; } }
+.harvest .moon { position: absolute; left: 4px; top: 40px; }   /* top left, just under the LIVE label; the phone's buttons are top right */
 .harvest .walk { position: absolute; left: 0; width: 100%; animation: spook-right linear infinite; }
 .harvest .walk.cornucopia { animation-name: spook-left; }
 .harvest svg { overflow: visible; }
