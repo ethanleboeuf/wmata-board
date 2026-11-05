@@ -77,12 +77,15 @@ const CORNUCOPIA = `<svg viewBox="0 0 64 50" width="64" height="50">` +
   `<circle cx="38" cy="18" r="2.2" fill="#fff"/><circle cx="37.3" cy="18.2" r="1.1" fill="#111"/>` +
   `<g class="wink"><circle cx="44" cy="16.6" r="2" fill="#fff"/><circle cx="43.3" cy="16.8" r="1" fill="#111"/></g></svg>`;
 // [kind, top %, seconds to cross, delay s]; negative delays start them mid-walk.
-// The "turkey griddy" one heel-taps across swinging its arms, then holds its hands
-// up over its eyes like glasses, Justin Jefferson style.
+// The "turkey griddy" one hops forward across swinging its arms, heel-tapping, then
+// holds its hands up over its eyes like goggles, Justin Jefferson style.
 const WALKERS = [
-  ["turkey", 22, 90, -15], ["turkey griddy", 56, 110, -70], ["turkey", 82, 100, -40],
+  ["turkey", 22, 90, -15], ["turkey griddy", 56, 32, -20], ["turkey", 82, 100, -40],
   ["cornucopia", 12, 120, -30], ["cornucopia", 40, 105, -85], ["cornucopia", 70, 130, -5],
 ];
+// One griddy hop, matching board.css's griddy-hop/griddy-glide (two hops per .96 s);
+// --hop is how far the walk moves in that time, which each hop covers.
+const GRIDDY_HOP_S = 0.48;
 const MOON = `<svg class="moon" viewBox="0 0 96 96" width="96" height="96">` +
   `<defs><radialGradient id="harvestglow"><stop offset=".45" stop-color="#ffb84d" stop-opacity=".5"/>` +
   `<stop offset="1" stop-color="#ffb84d" stop-opacity="0"/></radialGradient></defs>` +
@@ -124,7 +127,8 @@ export function harvestLayer() {
       `<svg viewBox="-10 -10 20 20" width="18" height="18"><path d="${LEAF}" fill="${LEAF_COLORS[i % LEAF_COLORS.length]}"/></svg>` +
       `</div></div>`).join("") +
     WALKERS.map(([kind, top, secs, delay]) =>
-      `<div class="walk ${kind}" style="top:${top}%;animation-duration:${secs}s;animation-delay:${delay}s">` +
+      `<div class="walk ${kind}" style="top:${top}%;animation-duration:${secs}s;animation-delay:${delay}s;` +
+      `--hop:${(116 * GRIDDY_HOP_S / secs).toFixed(3)}cqw">` +
       `<div class="sprite">${kind.startsWith("turkey") ? TURKEY : CORNUCOPIA}</div></div>`).join("") +
     GAG;
   const gag = div.querySelector(".gag");
