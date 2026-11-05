@@ -197,11 +197,11 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .head { animation: harvest-peck .45s ease-in-out infinite alternate; }
 .harvest .tail { transform-box: fill-box; transform-origin: 50% 100%; animation: harvest-fan 1.8s ease-in-out infinite alternate; }
 .harvest .arm { display: none; }
-/* The griddy (WALKERS "turkey griddy"), one 2.4 s bar: heel taps on every beat while the arms swing in turn,
+/* The griddy (WALKERS "turkey griddy"), one 4.8 s bar: heel taps on every beat while the arms swing in turn,
    then both hands up over the eyes like glasses. It hops on the standing foot at each heel tap, leaning into it. The wing hides so the arms read. */
-.harvest .griddy .sprite { animation: griddy-hop .48s linear infinite; }
-.harvest .griddy .leg { animation: griddy-tap .48s ease-in-out infinite; }
-.harvest .griddy .leg.step2 { animation-delay: -.24s; }
+.harvest .griddy .sprite { animation: griddy-hop .96s linear infinite; }
+.harvest .griddy .leg { animation: griddy-tap .96s ease-in-out infinite; }
+.harvest .griddy .leg.step2 { animation-delay: -.48s; }
 .harvest .griddy .twing { display: none; }
 .harvest .griddy .head { animation: none; }   /* holds still so the glasses land on the eye */
 .harvest .griddy .arm { display: inline; }
@@ -209,9 +209,9 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .arm circle { stroke-width: 1.8; stroke: #f6c45e; }
 .harvest .arm.far path, .harvest .arm.far circle { stroke: #b07a30; }
 .harvest .arm .upper, .harvest .arm .fore { transform-origin: 0 0; }
-.harvest .griddy .arm .upper { animation: griddy-upper 2.4s ease-in-out infinite; }
+.harvest .griddy .arm .upper { animation: griddy-upper 4.8s ease-in-out infinite; }
 .harvest .griddy .arm.far .upper { animation-name: griddy-upper-far; }
-.harvest .griddy .arm .fore { animation: griddy-fore 2.4s ease-in-out infinite; }
+.harvest .griddy .arm .fore { animation: griddy-fore 4.8s ease-in-out infinite; }
 .harvest .griddy .arm.far .fore { animation-name: griddy-fore-far; }
 .harvest .horn { fill: #c98a3e; stroke: #7a4f22; stroke-width: 1.2; }
 .harvest .weave { fill: none; stroke: #8f5d2a; stroke-width: 1.1; }
