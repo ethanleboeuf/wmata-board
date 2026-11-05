@@ -38,7 +38,11 @@ const f = n => n.toFixed(1);
 
 // ---- walkers (an HTML layer under the SVG overlay) -------------------------
 // A turkey strutting right: a fanned tail in three rings, a bobbing head, and
-// legs that step. The far wing only shows on the one doing the griddy.
+// legs that step. The arms only show on the one doing the griddy (board.css):
+// shoulder at 28,29, each a hinged upper arm and forearm ending in a ring of a
+// hand: the near one goes over its eye, the far one past its beak, like goggles.
+const ARM = cls => `<g class="arm ${cls}" transform="translate(28,29)"><g class="upper"><path d="M0,0 V11"/>` +
+  `<g transform="translate(0,11)"><g class="fore"><path d="M0,0 V9.6"/><circle cy="12.4" r="2.8"/></g></g></g></g>`;
 const fan = (ry, fill) => [-72, -48, -24, 0, 24, 48, 72].map(a =>
   `<ellipse cx="18" cy="${f(29 - ry)}" rx="4.6" ry="${ry}" fill="${fill}" ` +
   `transform="rotate(${a} 18 29)"/>`).join("");
@@ -46,14 +50,15 @@ const TURKEY = `<svg viewBox="-18 -8 74 62" width="74" height="62">` +   // room
   `<g class="tail">${fan(17, "#b5452a")}${fan(13, "#e0a23a")}${fan(9, "#7a4a26")}</g>` +
   `<path class="leg step" d="M21,39 L20,50 M17.6,50 L22.4,50"/>` +
   `<path class="leg step2" d="M27,39 L28,50 M25.6,50 L30.4,50"/>` +
-  `<path class="twing far" d="M18,27 Q25,22 31,28 Q26,35 18,27 Z"/>` +
+  ARM("far") +
   `<ellipse class="tbody" cx="24" cy="32" rx="11.5" ry="9.5"/>` +
   `<path class="twing" d="M15,30 Q22,25 28,31 Q23,38 15,30 Z"/>` +
   `<g class="head"><path class="neck" d="M30,30 Q35,26 35.5,18"/>` +
   `<circle class="thead" cx="36" cy="16.5" r="4.6"/>` +
   `<path class="beak" d="M40,15.2 L44.2,16.8 L40,18.4 Z"/>` +
   `<path class="wattle" d="M39.6,18 Q41,22 38.6,24.4 Q37.4,21 38.4,18 Z"/>` +
-  `<circle cx="37.4" cy="15" r="1.3" fill="#fff"/><circle cx="37.8" cy="15" r=".7" fill="#111"/></g></svg>`;
+  `<circle cx="37.4" cy="15" r="1.3" fill="#fff"/><circle cx="37.8" cy="15" r=".7" fill="#111"/></g>` +
+  ARM("near") + `</svg>`;
 // A cornucopia waddling left: a woven horn curling up at the tip, spilling a
 // pumpkin, an apple and grapes from its mouth, with eyes and stomping legs.
 const CORNUCOPIA = `<svg viewBox="0 0 64 50" width="64" height="50">` +
@@ -72,7 +77,8 @@ const CORNUCOPIA = `<svg viewBox="0 0 64 50" width="64" height="50">` +
   `<circle cx="38" cy="18" r="2.2" fill="#fff"/><circle cx="37.3" cy="18.2" r="1.1" fill="#111"/>` +
   `<g class="wink"><circle cx="44" cy="16.6" r="2" fill="#fff"/><circle cx="43.3" cy="16.8" r="1" fill="#111"/></g></svg>`;
 // [kind, top %, seconds to cross, delay s]; negative delays start them mid-walk.
-// The "turkey griddy" one heel-taps and pumps its wings across instead of strutting.
+// The "turkey griddy" one heel-taps across swinging its arms, then holds its hands
+// up over its eyes like glasses, Justin Jefferson style.
 const WALKERS = [
   ["turkey", 22, 90, -15], ["turkey griddy", 56, 110, -70], ["turkey", 82, 100, -40],
   ["cornucopia", 12, 120, -30], ["cornucopia", 40, 105, -85], ["cornucopia", 70, 130, -5],

@@ -196,14 +196,23 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .wattle { fill: #d33b2c; }
 .harvest .head { animation: harvest-peck .45s ease-in-out infinite alternate; }
 .harvest .tail { transform-box: fill-box; transform-origin: 50% 100%; animation: harvest-fan 1.8s ease-in-out infinite alternate; }
-.harvest .twing.far { display: none; }
-/* The griddy (WALKERS "turkey griddy"): heel taps, wings pumping in turn, a bounce on every beat. */
-.harvest .griddy .sprite { animation: griddy-bounce .25s ease-in-out infinite alternate; }
-.harvest .griddy .leg { animation: griddy-tap .5s ease-in-out infinite; }
-.harvest .griddy .leg.step2 { animation-delay: -.25s; }
-.harvest .griddy .twing { transform-box: fill-box; transform-origin: 100% 30%; animation: griddy-arm .5s ease-in-out infinite; }
-.harvest .griddy .twing.far { display: inline; fill: #3a1f0e; animation-delay: -.25s; }
-.harvest .griddy .head { animation-duration: .25s; }
+.harvest .arm { display: none; }
+/* The griddy (WALKERS "turkey griddy"), one 2.4 s bar: heel taps on every beat while the arms swing in turn,
+   then both hands up over the eyes like glasses. The wing hides so the arms read. */
+.harvest .griddy .sprite { animation: griddy-bounce .24s ease-in-out infinite alternate; }
+.harvest .griddy .leg { animation: griddy-tap .48s ease-in-out infinite; }
+.harvest .griddy .leg.step2 { animation-delay: -.24s; }
+.harvest .griddy .twing { display: none; }
+.harvest .griddy .head { animation: none; }   /* holds still so the glasses land on the eye */
+.harvest .griddy .arm { display: inline; }
+.harvest .arm path, .harvest .arm circle { fill: none; stroke: #d9983a; stroke-width: 3; stroke-linecap: round; }
+.harvest .arm circle { stroke-width: 1.8; stroke: #f6c45e; }
+.harvest .arm.far path, .harvest .arm.far circle { stroke: #b07a30; }
+.harvest .arm .upper, .harvest .arm .fore { transform-origin: 0 0; }
+.harvest .griddy .arm .upper { animation: griddy-upper 2.4s ease-in-out infinite; }
+.harvest .griddy .arm.far .upper { animation-name: griddy-upper-far; }
+.harvest .griddy .arm .fore { animation: griddy-fore 2.4s ease-in-out infinite; }
+.harvest .griddy .arm.far .fore { animation-name: griddy-fore-far; }
 .harvest .horn { fill: #c98a3e; stroke: #7a4f22; stroke-width: 1.2; }
 .harvest .weave { fill: none; stroke: #8f5d2a; stroke-width: 1.1; }
 .harvest .mouth { fill: #4a2c12; stroke: #7a4f22; stroke-width: 1.2; }
@@ -254,7 +263,12 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
                         70%, 88% { transform: scale(1); opacity: 1; } 91%, 100% { opacity: 0; } }
 @keyframes griddy-bounce { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
 @keyframes griddy-tap { 0%, 45%, 100% { transform: rotate(0deg); } 18%, 28% { transform: rotate(-42deg) translateY(-2px); } }
-@keyframes griddy-arm { 0%, 100% { transform: rotate(32deg); } 50% { transform: rotate(-30deg); } }
+@keyframes griddy-upper { 0%, 20%, 40% { transform: rotate(-35deg); } 10%, 30%, 50% { transform: rotate(40deg); }
+                          58%, 88% { transform: rotate(-99deg); } 100% { transform: rotate(-35deg); } }
+@keyframes griddy-upper-far { 0%, 20%, 40% { transform: rotate(40deg); } 10%, 30%, 50% { transform: rotate(-35deg); }
+                              58%, 88% { transform: rotate(-102deg); } 100% { transform: rotate(40deg); } }
+@keyframes griddy-fore { 0%, 50% { transform: rotate(-25deg); } 58%, 88% { transform: rotate(-88deg); } 100% { transform: rotate(-25deg); } }
+@keyframes griddy-fore-far { 0%, 50% { transform: rotate(-25deg); } 58%, 88% { transform: rotate(-64deg); } 100% { transform: rotate(-25deg); } }
 @keyframes harvest-waddle { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-2px); } }
 @keyframes harvest-step { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 @keyframes harvest-peck { from { transform: translate(0, 0); } to { transform: translate(2.5px, 1px); } }
