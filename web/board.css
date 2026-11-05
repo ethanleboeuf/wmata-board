@@ -198,8 +198,8 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .tail { transform-box: fill-box; transform-origin: 50% 100%; animation: harvest-fan 1.8s ease-in-out infinite alternate; }
 .harvest .arm { display: none; }
 /* The griddy (WALKERS "turkey griddy"), one 2.4 s bar: heel taps on every beat while the arms swing in turn,
-   then both hands up over the eyes like glasses. The wing hides so the arms read. */
-.harvest .griddy .sprite { animation: griddy-bounce .24s ease-in-out infinite alternate; }
+   then both hands up over the eyes like glasses. It hops on the standing foot at each heel tap, leaning into it. The wing hides so the arms read. */
+.harvest .griddy .sprite { animation: griddy-hop .48s linear infinite; }
 .harvest .griddy .leg { animation: griddy-tap .48s ease-in-out infinite; }
 .harvest .griddy .leg.step2 { animation-delay: -.24s; }
 .harvest .griddy .twing { display: none; }
@@ -261,7 +261,11 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
                       80%, 100% { transform: var(--to); opacity: 0; } }
 @keyframes gag-bubble { 0%, 65% { transform: scale(.4); opacity: 0; } 68% { transform: scale(1.1); opacity: 1; }
                         70%, 88% { transform: scale(1); opacity: 1; } 91%, 100% { opacity: 0; } }
-@keyframes griddy-bounce { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
+@keyframes griddy-hop { 0% { transform: translateY(0) rotate(-4deg); animation-timing-function: ease-out; }
+                        20% { transform: translateY(-10px) rotate(-6deg); animation-timing-function: ease-in; }
+                        40%, 50% { transform: translateY(0) rotate(4deg); animation-timing-function: ease-out; }
+                        70% { transform: translateY(-10px) rotate(6deg); animation-timing-function: ease-in; }
+                        90%, 100% { transform: translateY(0) rotate(-4deg); } }
 @keyframes griddy-tap { 0%, 45%, 100% { transform: rotate(0deg); } 18%, 28% { transform: rotate(-42deg) translateY(-2px); } }
 @keyframes griddy-upper { 0%, 20%, 40% { transform: rotate(-35deg); } 10%, 30%, 50% { transform: rotate(40deg); }
                           58%, 88% { transform: rotate(-99deg); } 100% { transform: rotate(-35deg); } }
