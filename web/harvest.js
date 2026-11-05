@@ -38,7 +38,7 @@ const f = n => n.toFixed(1);
 
 // ---- walkers (an HTML layer under the SVG overlay) -------------------------
 // A turkey strutting right: a fanned tail in three rings, a bobbing head, and
-// legs that step.
+// legs that step. The far wing only shows on the one doing the griddy.
 const fan = (ry, fill) => [-72, -48, -24, 0, 24, 48, 72].map(a =>
   `<ellipse cx="18" cy="${f(29 - ry)}" rx="4.6" ry="${ry}" fill="${fill}" ` +
   `transform="rotate(${a} 18 29)"/>`).join("");
@@ -46,6 +46,7 @@ const TURKEY = `<svg viewBox="-18 -8 74 62" width="74" height="62">` +   // room
   `<g class="tail">${fan(17, "#b5452a")}${fan(13, "#e0a23a")}${fan(9, "#7a4a26")}</g>` +
   `<path class="leg step" d="M21,39 L20,50 M17.6,50 L22.4,50"/>` +
   `<path class="leg step2" d="M27,39 L28,50 M25.6,50 L30.4,50"/>` +
+  `<path class="twing far" d="M18,27 Q25,22 31,28 Q26,35 18,27 Z"/>` +
   `<ellipse class="tbody" cx="24" cy="32" rx="11.5" ry="9.5"/>` +
   `<path class="twing" d="M15,30 Q22,25 28,31 Q23,38 15,30 Z"/>` +
   `<g class="head"><path class="neck" d="M30,30 Q35,26 35.5,18"/>` +
@@ -71,8 +72,9 @@ const CORNUCOPIA = `<svg viewBox="0 0 64 50" width="64" height="50">` +
   `<circle cx="38" cy="18" r="2.2" fill="#fff"/><circle cx="37.3" cy="18.2" r="1.1" fill="#111"/>` +
   `<g class="wink"><circle cx="44" cy="16.6" r="2" fill="#fff"/><circle cx="43.3" cy="16.8" r="1" fill="#111"/></g></svg>`;
 // [kind, top %, seconds to cross, delay s]; negative delays start them mid-walk.
+// The "turkey griddy" one heel-taps and pumps its wings across instead of strutting.
 const WALKERS = [
-  ["turkey", 22, 90, -15], ["turkey", 56, 110, -70], ["turkey", 82, 100, -40],
+  ["turkey", 22, 90, -15], ["turkey griddy", 56, 110, -70], ["turkey", 82, 100, -40],
   ["cornucopia", 12, 120, -30], ["cornucopia", 40, 105, -85], ["cornucopia", 70, 130, -5],
 ];
 const MOON = `<svg class="moon" viewBox="0 0 96 96" width="96" height="96">` +
@@ -117,7 +119,7 @@ export function harvestLayer() {
       `</div></div>`).join("") +
     WALKERS.map(([kind, top, secs, delay]) =>
       `<div class="walk ${kind}" style="top:${top}%;animation-duration:${secs}s;animation-delay:${delay}s">` +
-      `<div class="sprite">${kind === "turkey" ? TURKEY : CORNUCOPIA}</div></div>`).join("") +
+      `<div class="sprite">${kind.startsWith("turkey") ? TURKEY : CORNUCOPIA}</div></div>`).join("") +
     GAG;
   const gag = div.querySelector(".gag");
   const walking = on => gag.classList.toggle("walking", on);   // the cornucopia walks in and out, not while holding

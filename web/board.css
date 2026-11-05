@@ -196,6 +196,14 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .wattle { fill: #d33b2c; }
 .harvest .head { animation: harvest-peck .45s ease-in-out infinite alternate; }
 .harvest .tail { transform-box: fill-box; transform-origin: 50% 100%; animation: harvest-fan 1.8s ease-in-out infinite alternate; }
+.harvest .twing.far { display: none; }
+/* The griddy (WALKERS "turkey griddy"): heel taps, wings pumping in turn, a bounce on every beat. */
+.harvest .griddy .sprite { animation: griddy-bounce .25s ease-in-out infinite alternate; }
+.harvest .griddy .leg { animation: griddy-tap .5s ease-in-out infinite; }
+.harvest .griddy .leg.step2 { animation-delay: -.25s; }
+.harvest .griddy .twing { transform-box: fill-box; transform-origin: 100% 30%; animation: griddy-arm .5s ease-in-out infinite; }
+.harvest .griddy .twing.far { display: inline; fill: #3a1f0e; animation-delay: -.25s; }
+.harvest .griddy .head { animation-duration: .25s; }
 .harvest .horn { fill: #c98a3e; stroke: #7a4f22; stroke-width: 1.2; }
 .harvest .weave { fill: none; stroke: #8f5d2a; stroke-width: 1.1; }
 .harvest .mouth { fill: #4a2c12; stroke: #7a4f22; stroke-width: 1.2; }
@@ -244,6 +252,9 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
                       80%, 100% { transform: var(--to); opacity: 0; } }
 @keyframes gag-bubble { 0%, 65% { transform: scale(.4); opacity: 0; } 68% { transform: scale(1.1); opacity: 1; }
                         70%, 88% { transform: scale(1); opacity: 1; } 91%, 100% { opacity: 0; } }
+@keyframes griddy-bounce { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-4px) rotate(2deg); } }
+@keyframes griddy-tap { 0%, 45%, 100% { transform: rotate(0deg); } 18%, 28% { transform: rotate(-42deg) translateY(-2px); } }
+@keyframes griddy-arm { 0%, 100% { transform: rotate(32deg); } 50% { transform: rotate(-30deg); } }
 @keyframes harvest-waddle { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-2px); } }
 @keyframes harvest-step { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 @keyframes harvest-peck { from { transform: translate(0, 0); } to { transform: translate(2.5px, 1px); } }
