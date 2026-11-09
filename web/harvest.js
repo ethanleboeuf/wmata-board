@@ -1,9 +1,11 @@
 // Thanksgiving dress-up for the shared map, switched on by `[map] theme =
 // "thanksgiving"` in config.toml: a brown-and-gold harvest basemap, a harvest
 // moon, turkeys and walking cornucopias crossing under the lanes, leaves
-// drifting down, a pumpkin pie beside home, autumn leaves on the hospital, and
+// drifting down and piling up like a snowglobe (leafglobe.js), a pumpkin pie beside home, autumn leaves on the hospital, and
 // the rider as a little pilgrim (her rat too). Built like spooky.js; map.js
 // picks one theme object by name.
+
+import { LeafGlobe } from "./leafglobe.js";
 
 export const HARVEST_LAND = "#1a120c";
 
@@ -97,9 +99,79 @@ const MOON = `<svg class="moon" viewBox="0 0 96 96" width="96" height="96">` +
 const LEAF = "M0,-9 L2,-4.4 L5.2,-6.2 L4.2,-1.2 L8.4,-1.4 L5.4,2 L6.4,4.4 L1,3.2 L.9,8.6 L-.9,8.6 " +
              "L-1,3.2 L-6.4,4.4 L-5.4,2 L-8.4,-1.4 L-4.2,-1.2 L-5.2,-6.2 L-2,-4.4 Z";
 const LEAF_COLORS = ["#c8322b", "#e0a23a", "#d0601e", "#b5452a", "#e8b84a"];
-// [left %, seconds to fall, delay s, sideways drift px]
-const FALLING = [[8, 26, -3, 60], [24, 31, -17, -40], [41, 23, -9, 50], [57, 29, -22, -60],
-                 [72, 25, -12, 45], [88, 33, -27, -50], [33, 35, -30, 30]];
+const PILE_MAX = 90;        // resting leaves before the oldest fades away
+const SHAKE_MS2 = 15;       // m/s² of jolt (gravity aside) that counts as a shake
+const TILT_DEADZONE = 4;    // degrees of tilt ignored, so a phone held about level stays put
+
+// Draw the leaves on a canvas at ~30 fps. On the phone the floor is the top of
+// the bottom sheet, and the phone's tilt and shakes move them.
+function leafGlobe(div) {
+  const canvas = document.createElement("canvas");
+  canvas.className = "globe";
+  div.prepend(canvas);
+  const ctx = canvas.getContext("2d"), leaf = new Path2D(LEAF);
+  const globe = new LeafGlobe({ max: PILE_MAX, colors: LEAF_COLORS.length });
+  const sheet = document.body.classList.contains("phone") && document.getElementById("sheet");
+  let last = 0;
+  const frame = t => {
+    requestAnimationFrame(frame);
+    if (t - last < 30) return;
+    const dt = Math.min((t - last) / 1000, 0.1);
+    last = t;
+    const w = div.clientWidth, h = div.clientHeight, dpr = devicePixelRatio || 1;
+    if (!w || !h) return;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    }
+    let floor = h;
+    const sr = sheet && sheet.getBoundingClientRect();
+    if (sr && sr.height) floor = Math.max(40, Math.min(h, sr.top - div.getBoundingClientRect().top));
+    globe.resize(w, floor);
+    globe.step(dt);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    for (const l of globe.leaves) {
+      ctx.globalAlpha = Math.max(0, l.alpha);
+      ctx.fillStyle = LEAF_COLORS[l.color];
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(l.dx, l.dy); ctx.rotate(l.rot); ctx.scale(l.size, l.size);
+      ctx.fill(leaf);
+    }
+  };
+  requestAnimationFrame(frame);
+  if (sheet) shakeWithPhone(globe);
+}
+
+// Tilt steers the leaves and slides the pile; a shake throws them up. iOS only
+// hands out motion after the page asks during a tap, so ask on the first one.
+function shakeWithPhone(globe) {
+  const askers = [globalThis.DeviceMotionEvent, globalThis.DeviceOrientationEvent]
+    .filter(E => typeof E?.requestPermission === "function");
+  if (askers.length) {
+    const ask = () => {
+      removeEventListener("touchend", ask); removeEventListener("click", ask);
+      for (const E of askers) E.requestPermission().catch(() => {});
+    };
+    addEventListener("touchend", ask); addEventListener("click", ask);
+  }
+  addEventListener("deviceorientation", e => {
+    if (e.gamma == null) return;
+    const g = Math.abs(e.gamma) < TILT_DEADZONE ? 0 : e.gamma;
+    globe.gx = Math.sin(g * Math.PI / 180);
+  });
+  let lastShake = -1e9;
+  addEventListener("devicemotion", e => {
+    let jolt;
+    const a = e.acceleration, ag = e.accelerationIncludingGravity;
+    if (a && a.x != null) jolt = Math.hypot(a.x, a.y, a.z);
+    else if (ag && ag.x != null) jolt = Math.abs(Math.hypot(ag.x, ag.y, ag.z) - 9.81);
+    else return;
+    if (jolt > SHAKE_MS2 && e.timeStamp - lastShake > 300) {
+      lastShake = e.timeStamp;
+      globe.shake(Math.min(1, jolt / 30));
+    }
+  });
+}
 
 // The Lucy-and-the-football gag, every few minutes in the lower left: a
 // cornucopia holds a football for a turkey, yanks it away at the last second,
@@ -121,11 +193,6 @@ export function harvestLayer() {
   const div = document.createElement("div");
   div.className = "harvest";
   div.innerHTML = MOON +
-    FALLING.map(([left, secs, delay, drift], i) =>
-      `<div class="fall" style="left:${left}%;animation-duration:${secs}s;animation-delay:${delay}s">` +
-      `<div class="sway" style="--drift:${drift}px;animation-delay:${delay / 2}s">` +
-      `<svg viewBox="-10 -10 20 20" width="18" height="18"><path d="${LEAF}" fill="${LEAF_COLORS[i % LEAF_COLORS.length]}"/></svg>` +
-      `</div></div>`).join("") +
     WALKERS.map(([kind, top, secs, delay]) =>
       `<div class="walk ${kind}" style="top:${top}%;animation-duration:${secs}s;animation-delay:${delay}s;` +
       `--hop:${(116 * GRIDDY_HOP_S / secs).toFixed(3)}cqw">` +
@@ -141,6 +208,7 @@ export function harvestLayer() {
   };
   setTimeout(play, GAG_FIRST_MS);
   setInterval(play, GAG_EVERY_MS);
+  leafGlobe(div);
   return div;
 }
 

@@ -217,8 +217,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .harvest .horn { fill: #c98a3e; stroke: #7a4f22; stroke-width: 1.2; }
 .harvest .weave { fill: none; stroke: #8f5d2a; stroke-width: 1.1; }
 .harvest .mouth { fill: #4a2c12; stroke: #7a4f22; stroke-width: 1.2; }
-.harvest .fall { position: absolute; top: 0; height: 100%; width: 0; animation: harvest-fall linear infinite; }
-.harvest .sway { opacity: .7; animation: harvest-sway 4s ease-in-out infinite alternate; }
+.harvest .globe { position: absolute; inset: 0; width: 100%; height: 100%; }   /* the falling, piling leaves (leafglobe.js) */
 /* The football gag (harvest.js GAG): one 10 s take, replayed by toggling .play. */
 .harvest .gag { position: absolute; left: 6%; top: 74%; width: 240px; height: 100px; opacity: 0;
                 z-index: 3; }   /* above the labels and lines for its 10 s, so "AAUGH!" reads */
@@ -285,8 +284,6 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 @keyframes harvest-step { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 @keyframes harvest-peck { from { transform: translate(0, 0); } to { transform: translate(2.5px, 1px); } }
 @keyframes harvest-fan { from { transform: scale(.94); } to { transform: scale(1.04); } }
-@keyframes harvest-fall { from { transform: translateY(-6%); } to { transform: translateY(104%); } }
-@keyframes harvest-sway { from { transform: translateX(0) rotate(-40deg); } to { transform: translateX(var(--drift)) rotate(50deg); } }
 @keyframes pie-steam { 0% { opacity: 0; transform: translateY(2px); } 40% { opacity: .65; }
                        100% { opacity: 0; transform: translateY(-5px); } }
 .pulse { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border: 3px solid #fff;
