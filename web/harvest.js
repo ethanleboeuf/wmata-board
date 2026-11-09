@@ -103,16 +103,32 @@ const PILE_MAX = { wall: 400, phone: 90 };   // resting leaves before the oldest
 const SHAKE_MS2 = 15;       // m/s² of jolt (gravity aside) that counts as a shake
 const TILT_DEADZONE = 4;    // degrees of tilt ignored, so a phone held about level stays put
 
-// Draw the leaves on a canvas at ~30 fps. On the phone the floor is the top of
+// Draw the leaves on canvases at ~30 fps: the ones in the air every frame, the
+// pile on its own canvas only when it changes (a landing, a slide, the sheet
+// moving), so a deep pile costs little. On the phone the floor is the top of
 // the bottom sheet, and the phone's tilt and shakes move them.
 function leafGlobe(div) {
-  const canvas = document.createElement("canvas");
-  canvas.className = "globe";
-  div.prepend(canvas);
-  const ctx = canvas.getContext("2d"), leaf = new Path2D(LEAF);
+  const canvases = [0, 1].map(() => {
+    const c = document.createElement("canvas");
+    c.className = "globe";
+    return c;
+  });
+  div.prepend(...canvases);
+  const [pileCtx, airCtx] = canvases.map(c => c.getContext("2d")), leaf = new Path2D(LEAF);
   const sheet = document.body.classList.contains("phone") && document.getElementById("sheet");
   const globe = new LeafGlobe({ max: sheet ? PILE_MAX.phone : PILE_MAX.wall, colors: LEAF_COLORS.length });
-  let last = 0;
+  const draw = (ctx, leaves, dpr, w, h) => {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    for (const l of leaves) {
+      ctx.globalAlpha = Math.max(0, l.alpha);
+      ctx.fillStyle = LEAF_COLORS[l.color];
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(l.dx, l.dy); ctx.rotate(l.rot); ctx.scale(l.size, l.size);
+      ctx.fill(leaf);
+    }
+  };
+  let last = 0, pileSig = "";
   const frame = t => {
     requestAnimationFrame(frame);
     if (t - last < 30) return;
@@ -120,23 +136,21 @@ function leafGlobe(div) {
     last = t;
     const w = div.clientWidth, h = div.clientHeight, dpr = devicePixelRatio || 1;
     if (!w || !h) return;
-    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    for (const c of canvases) {
+      if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+        c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); pileSig = "";
+      }
     }
     let floor = h;
     const sr = sheet && sheet.getBoundingClientRect();
     if (sr && sr.height) floor = Math.max(40, Math.min(h, sr.top - div.getBoundingClientRect().top));
     globe.resize(w, floor);
     globe.step(dt);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    for (const l of globe.leaves) {
-      ctx.globalAlpha = Math.max(0, l.alpha);
-      ctx.fillStyle = LEAF_COLORS[l.color];
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.translate(l.dx, l.dy); ctx.rotate(l.rot); ctx.scale(l.size, l.size);
-      ctx.fill(leaf);
-    }
+    let sig = 0;
+    for (const l of globe.pile) sig += Math.round(l.dx * 4) + Math.round(l.dy * 4) * 3;
+    sig = `${globe.pile.length} ${sig}`;
+    if (sig !== pileSig) { pileSig = sig; draw(pileCtx, globe.pile, dpr, w, h); }
+    draw(airCtx, globe.leaves.filter(l => !l.resting), dpr, w, h);
   };
   requestAnimationFrame(frame);
   if (sheet) shakeWithPhone(globe);
