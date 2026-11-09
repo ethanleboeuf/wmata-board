@@ -151,8 +151,13 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   const project = (lon, lat) => { const p = map.project([lon, lat]); return [p.x, p.y]; };
   const pl = pts => pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
 
+  // The container's size, kept current by the ResizeObserver below. Reading
+  // clientWidth inside a frame forces a style and layout pass, which on the Pi
+  // costs more than the frame's own work.
+  let W = el.clientWidth, H = el.clientHeight;
+
   function drawStatic() {
-    const W = el.clientWidth, H = el.clientHeight, out = [];
+    const out = [];
     for (const p of net.places) {
       const [x, y] = project(p.lon, p.lat);
       out.push(`<text class="place" x="${x.toFixed(0)}" y="${y.toFixed(0)}" text-anchor="middle">${escapeHtml(p.name)}</text>`);
@@ -266,12 +271,15 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     return [x - dy / l * off, y + dx / l * off, Math.atan2(dy, dx)];
   }
 
-  let lastFrame = 0;
+  // Trains creep along at under a pixel a second on the wall, so 5 fps is
+  // plenty; while the map moves (the phone panning) they go to ~30 fps so they
+  // stay on their lanes.
+  let lastFrame = 0, movingUntil = 0;
   function frame(now) {
     requestAnimationFrame(frame);
-    if (now - lastFrame < 33) return;           // ~30 fps is plenty, and kind to the Pi
+    if (now - lastFrame < (now < movingUntil ? 33 : 200)) return;
     lastFrame = now;
-    const W = el.clientWidth, H = el.clientHeight, seen = new Set();
+    const seen = new Set();
     let visible = 0;
     for (const v of glider.at(now)) {
       let e = els.get(v.id);
@@ -305,7 +313,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
 
   function refit() {
     if (fit !== "cover") return;
-    const v = coverView(net.view.bbox, el.clientWidth, el.clientHeight);
+    const v = coverView(net.view.bbox, W, H);
     map.jumpTo({ center: v.center, zoom: v.zoom });
   }
   // Rebuilding the static SVG is the expensive part; coalesce move/load/resize
@@ -316,9 +324,12 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     drawPending = true;
     requestAnimationFrame(() => { drawPending = false; drawStatic(); });
   }
-  const ro = new ResizeObserver(() => { map.resize(); refit(); scheduleDraw(); });
+  const ro = new ResizeObserver(() => {
+    W = el.clientWidth; H = el.clientHeight;
+    map.resize(); refit(); scheduleDraw();
+  });
   ro.observe(el);
-  map.on("move", scheduleDraw);
+  map.on("move", () => { movingUntil = performance.now() + 500; scheduleDraw(); });
   map.on("load", scheduleDraw);
   drawStatic();
   pollPositions();

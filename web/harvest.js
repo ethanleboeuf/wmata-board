@@ -128,13 +128,16 @@ function leafGlobe(div) {
       ctx.fill(leaf);
     }
   };
-  let last = 0, pileSig = "";
+  // The layer's size, kept by a ResizeObserver: reading it every frame would
+  // force a style and layout pass right after map.js moves the trains.
+  let last = 0, pileSig = "", w = 0, h = 0;
+  new ResizeObserver(() => { w = div.clientWidth; h = div.clientHeight; }).observe(div);
   const frame = t => {
     requestAnimationFrame(frame);
     if (t - last < 30) return;
     const dt = Math.min((t - last) / 1000, 0.1);
     last = t;
-    const w = div.clientWidth, h = div.clientHeight, dpr = devicePixelRatio || 1;
+    const dpr = devicePixelRatio || 1;
     if (!w || !h) return;
     for (const c of canvases) {
       if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
