@@ -99,7 +99,7 @@ const MOON = `<svg class="moon" viewBox="0 0 96 96" width="96" height="96">` +
 const LEAF = "M0,-9 L2,-4.4 L5.2,-6.2 L4.2,-1.2 L8.4,-1.4 L5.4,2 L6.4,4.4 L1,3.2 L.9,8.6 L-.9,8.6 " +
              "L-1,3.2 L-6.4,4.4 L-5.4,2 L-8.4,-1.4 L-4.2,-1.2 L-5.2,-6.2 L-2,-4.4 Z";
 const LEAF_COLORS = ["#c8322b", "#e0a23a", "#d0601e", "#b5452a", "#e8b84a"];
-const PILE_MAX = 90;        // resting leaves before the oldest fades away
+const PILE_MAX = { wall: 400, phone: 90 };   // resting leaves before the oldest fades away
 const SHAKE_MS2 = 15;       // m/s² of jolt (gravity aside) that counts as a shake
 const TILT_DEADZONE = 4;    // degrees of tilt ignored, so a phone held about level stays put
 
@@ -110,8 +110,8 @@ function leafGlobe(div) {
   canvas.className = "globe";
   div.prepend(canvas);
   const ctx = canvas.getContext("2d"), leaf = new Path2D(LEAF);
-  const globe = new LeafGlobe({ max: PILE_MAX, colors: LEAF_COLORS.length });
   const sheet = document.body.classList.contains("phone") && document.getElementById("sheet");
+  const globe = new LeafGlobe({ max: sheet ? PILE_MAX.phone : PILE_MAX.wall, colors: LEAF_COLORS.length });
   let last = 0;
   const frame = t => {
     requestAnimationFrame(frame);
