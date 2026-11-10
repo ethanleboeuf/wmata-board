@@ -20,7 +20,7 @@ class Clock:
 
 
 @pytest.fixture
-def app(fixtures):
+def app(fixtures, tmp_path):
     cfg = config()
     clock = Clock()
     feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
@@ -29,7 +29,7 @@ def app(fixtures):
     feeds["station"].state = station_state()
     return create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test",
                       fresh_wait_s=0, start_polling=False, clock=clock,
-                      wall_clock=lambda: 0.0)   # recorded feed timestamps are never 'old' here
+                      wall_clock=lambda: 0.0, data_dir=tmp_path)   # recorded feed timestamps are never 'old' here
 
 
 def test_board_endpoint(app):
