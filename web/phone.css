@@ -83,6 +83,18 @@ body.phone * { box-sizing: border-box; }
 .tride { display: block; margin: 10px auto 2px; min-height: 36px; padding: 6px 16px; border-radius: 18px;
          border: 1px solid #2a313c; background: transparent; color: #aab3c0; font: 700 13px Inter, Helvetica, Arial, sans-serif; }
 .tride.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }
+/* Send a hello: the 💗 button under the recenter button, and its panel. */
+.hellobtn { top: calc(68px + env(safe-area-inset-top)); font-size: 22px; padding: 0; line-height: 1; }
+.hellobtn.on { background: #f7c3cc; border-color: #f7c3cc; }
+.hellocard h3 { margin-bottom: 10px; }
+.hrow { display: flex; gap: 4px; margin: 0 0 10px; }
+.hrow button { flex: 1; min-width: 0; min-height: 52px; padding: 0; border-radius: 12px; border: 1px solid #2a313c;
+               background: #151b23; font-size: 28px; line-height: 1; }
+.hrow button:active { background: #151e29; border-color: #f7c3cc; }
+.hellocard input { width: 100%; min-height: 42px; padding: 8px 12px; border-radius: 10px; border: 1px solid #2a313c;
+                   background: #151b23; color: #f2f4f7; font: 600 16px Inter, Helvetica, Arial, sans-serif; }
+.hellocard .hnote { margin: 8px 0 0; font-size: 13px; font-weight: 700; color: #f08a8a; }
+.hellocard .hnote:empty { display: none; }
 /* Station picker: tap the station name in the sheet header. */
 .phone .stn { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-size: 24px; font-weight: 800;
               text-align: left; cursor: pointer; }

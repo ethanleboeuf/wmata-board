@@ -13,6 +13,7 @@ import { buildTrack, snapToTrack, pointAt, laneOffset, headingSign, coverView,
 import { HALLOWEEN } from "./spooky.js";
 import { THANKSGIVING } from "./harvest.js";
 import { waveMode, waveHtml, cheerHtml } from "./wave.js";
+import { BURST_S, shouldPlay, remainingS, burstSpecs, burstHtml, bubbleHtml } from "./hello.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const LW = 7;
@@ -137,6 +138,9 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   const pulse = document.createElement("div");
   pulse.className = "pulse";
   el.appendChild(pulse);
+  const helloLayer = document.createElement("div");   // her hello floats up here, not in the SVG drawStatic() rebuilds
+  helloLayer.className = "hello-layer";
+  el.appendChild(helloLayer);
   const gStatic = svg.querySelector(".static"), gTrains = svg.querySelector(".trains");
   const dotEl = svg.querySelector(".dot"), lblEl = svg.querySelector(".lbl");
   let shownLabel = "";
@@ -222,6 +226,27 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     gTrains.classList.toggle("faded", stale);
   }
 
+  // Her hello (hello.js): played once per id, from her train if it's drawn,
+  // else the hospital, else mid-map; a few more rise over home's wave point.
+  // The burst stays where it started, even if the train moves on.
+  let playedHello = null;
+  function playHello(hello) {
+    if (!shouldPlay(hello, playedHello)) return;
+    playedHello = hello.id;
+    let at = [W / 2, H / 2];
+    const lm = net.landmarks[0];
+    if (lm) at = project(lm.lon, lm.lat);
+    for (const [id, e] of els) if (riding !== null && info.get(id)?.trip_id === riding && e.opacity > 0.5) at = [e.x, e.y];
+    const box = document.createElement("div");
+    box.innerHTML = burstHtml(hello.emoji, at[0], at[1], burstSpecs(hello.id)) +
+      (net.wave ? burstHtml(hello.emoji, ...project(net.wave.lon, net.wave.lat), burstSpecs(hello.id + 1, 4)) : "") +
+      bubbleHtml(at[0], at[1], hello.text, remainingS(hello), W);
+    const bits = [...box.children];
+    helloLayer.append(...bits);
+    for (const b of bits) b.addEventListener("animationend", () => b.remove());
+    setTimeout(() => bits.forEach(b => b.remove()), (Math.max(BURST_S, remainingS(hello)) + 1) * 1000);   // if animationend never comes
+  }
+
   async function pollPositions() {
     let ok = false;
     try {
@@ -232,6 +257,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         lastGoodMs = performance.now();
         setStale(body.stale);
         riding = body.ride ?? null;
+        playHello(body.hello);
         const wave = net.wave ? waveMode(riding) : null;
         if (wave !== waving) { waving = wave; scheduleDraw(); }
         const said = body.wave;   // his words, set from kiosk-selector since the page loaded

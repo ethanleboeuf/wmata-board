@@ -23,6 +23,7 @@ from .board import build_board
 from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_stations, get_off_stations, live_updates
 from .config import Config
 from .feeds import build_feeds
+from .hello import HELLO_EMOJI, hello_age_s, hello_showing, parse_hello
 from .messages import DAYS, Words, from_tailnet, load_messages, parse_messages, save_messages
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
@@ -99,6 +100,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
 
     app = FastAPI(title="wmata-board", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.feeds = feeds
+    app.state.hello = None   # her latest hello (hello.py); memory only
     app.state.data_dir = data_dir
     ride_path = data_dir / "ride.json"
     app.state.ride = load_ride(ride_path)
@@ -157,7 +159,31 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
             "ride": ride_trip(app.state.ride, wall_clock()),
             "wave": app.state.messages and todays_words(),
+            "hello": showing_hello(),
         }, headers=NO_STORE)
+
+    # Her hello from the phone (hello.py): every map plays each one once.
+    def current_hello():
+        h = app.state.hello
+        return h if hello_showing(h, wall_clock()) else None
+
+    def showing_hello() -> dict | None:
+        h = current_hello()
+        return h and {"id": h.id, "emoji": h.emoji, "text": h.text, "age_s": round(hello_age_s(h, wall_clock()), 1)}
+
+    @app.get("/api/hello")
+    async def get_hello():
+        h = current_hello()
+        return JSONResponse({"hello": h and h.as_json()}, headers=NO_STORE)
+
+    @app.post("/api/hello")
+    async def post_hello(request: Request):
+        try:
+            hello = parse_hello(await request.json(), wall_clock(), app.state.hello)
+        except ValueError as err:   # includes a body that isn't JSON
+            return JSONResponse({"error": str(err)}, status_code=400, headers=NO_STORE)
+        app.state.hello = hello
+        return JSONResponse({"hello": hello.as_json()}, headers=NO_STORE)
 
     # What the man by home says (messages.py): read by anyone, set only from the Pi.
     def messages_body() -> JSONResponse:
@@ -280,6 +306,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "landmarks": [{"name": x.name, "lat": x.lat, "lon": x.lon, "style": x.style} for x in m.landmarks],
             "theme": m.theme,
             "wave": m.wave and {"lat": m.wave.lat, "lon": m.wave.lon, **todays_words()},
+            "hello_emoji": list(HELLO_EMOJI),
         }, headers={"Cache-Control": "max-age=600"})
 
     @app.get("/healthz")

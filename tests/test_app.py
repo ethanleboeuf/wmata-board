@@ -153,7 +153,7 @@ def test_positions_before_first_fetch(app):
         body = c.get("/api/positions").json()
     assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
                     "error": None, "vehicles": [], "ride": None,
-                    "wave": {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}}
+                    "wave": {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}, "hello": None}
 
 
 def test_network_endpoint(app, fixtures):
@@ -168,6 +168,7 @@ def test_network_endpoint(app, fixtures):
     assert body["places"][0] == {"name": "GEORGETOWN", "lat": 38.9085, "lon": -77.0665}
     assert body["landmarks"][0]["style"] == "hospital"
     assert body["theme"] in ("", "halloween", "thanksgiving")
+    assert body["hello_emoji"] == ["💗", "👋", "😘", "🥳", "😴", "☕", "🐀"]
     assert body["wave"]["message"] == "have a good day at work!"
     assert body["wave"]["cheer"] == "YAYAYAYAYAY"
     assert set(body["wave"]) == {"lat", "lon", "message", "cheer"}
@@ -421,3 +422,31 @@ def test_messages_are_set_from_the_pi_only(fixtures, tmp_path):
     (tmp_path / "messages.json").write_text(json.dumps({"message": "old", "cheer": "older"}), encoding="utf-8")
     with TestClient(make()) as c:
         assert c.get("/api/messages").json()["messages"] == {d: {"message": "old", "cheer": "older"} for d in week}
+
+
+def test_hello_is_shared_through_positions(fixtures):
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
+    now = [1000.0]
+    app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
+                     start_polling=False, clock=clock, wall_clock=lambda: now[0])
+    with TestClient(app) as c:
+        assert c.get("/api/hello").json() == {"hello": None}
+        assert c.get("/api/positions").json()["hello"] is None
+        assert c.post("/api/hello", json={"emoji": "🙂"}).status_code == 400
+        assert "emoji" in c.post("/api/hello", json={"emoji": "🙂"}).json()["error"]
+        assert c.post("/api/hello", content="not json").status_code == 400
+        r = c.post("/api/hello", json={"emoji": "💗", "text": "on my way"})
+        assert r.status_code == 200
+        sent = r.json()["hello"]
+        assert sent == {"id": 1000000, "emoji": "💗", "text": "on my way", "at": 1000.0}
+        assert c.get("/api/hello").json() == {"hello": sent}
+        now[0] = 1012.0
+        assert c.get("/api/positions").json()["hello"] == {"id": 1000000, "emoji": "💗", "text": "on my way", "age_s": 12.0}
+        # a second send in the same millisecond is still a new hello
+        now[0] = 1000.0
+        assert c.post("/api/hello", json={"emoji": "👋"}).json()["hello"]["id"] == 1000001
+        now[0] = 1061.0
+        assert c.get("/api/positions").json()["hello"] is None
+        assert c.get("/api/hello").json() == {"hello": None}

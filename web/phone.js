@@ -136,6 +136,7 @@ async function toggleRide() {
   commutePoller.poll();   // her row pins to the top (or unpins) now, not on the next poll
 }
 async function openCard(next) {
+  closeHello();
   card = next;
   showCard(next.loading);
   while (card === next) {
@@ -145,7 +146,7 @@ async function openCard(next) {
     await new Promise(res => setTimeout(res, CARD_REFRESH_MS));
   }
 }
-function closeCard() { card = null; $("card").hidden = true; }
+function closeCard() { card = null; $("card").hidden = true; closeHello(); }
 $("card").addEventListener("click", ev => {
   if (ev.target.closest(".tclose")) closeCard();
   else if (ev.target.closest(".tride")) toggleRide();
@@ -260,6 +261,57 @@ $("picker").addEventListener("click", async ev => {
       () => renderPicker("Location unavailable — allow it in Settings, or search"),
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
   }
+});
+
+// ---- send a hello: the 💗 button; a tap on an emoji sends it with the words ----
+// The panel excludes the trip card and the picker (and they it): closeCard()
+// closes it too, and opening it closes both. The emoji come from the server
+// (/api/network hello_emoji), so the list lives in one place.
+let helloEmoji = null;
+async function openHello() {
+  closeCard();
+  closePicker();
+  const box = $("hello");
+  box.hidden = false;
+  $("hellobtn").classList.add("on");
+  if (!$("htext")) {
+    box.innerHTML = `<button class="tclose" aria-label="Close">✕</button><h3>Send a hello</h3>` +
+      `<div id="hrow" class="hrow"></div>` +
+      `<input id="htext" type="text" maxlength="40" placeholder="Add a few words" autocomplete="off">` +
+      `<div id="hnote" class="hnote"></div>`;
+  }
+  if (!helloEmoji) {
+    try {
+      const r = await fetch("/api/network", { signal: AbortSignal.timeout(8000) });
+      if (r.ok) helloEmoji = (await r.json()).hello_emoji ?? null;
+    } catch { /* the note below says so; reopening retries */ }
+  }
+  $("hrow").innerHTML = (helloEmoji || []).map(e => `<button data-emoji="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("");
+  $("hnote").textContent = helloEmoji ? "" : "Couldn't load the emoji. Close and try again.";
+}
+function closeHello() {
+  $("hello").hidden = true;
+  $("hellobtn").classList.remove("on");
+}
+async function sendHello(emoji) {
+  $("hnote").textContent = "";
+  try {
+    const r = await fetch("/api/hello", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(8000),
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emoji, text: $("htext").value }) });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${r.status}`);
+    }
+    $("htext").value = "";
+    closeHello();
+  } catch (err) {
+    $("hnote").textContent = `Couldn't send: ${err.name === "TimeoutError" || err.name === "TypeError" ? "no connection" : err.message}`;
+  }
+}
+$("hellobtn").addEventListener("click", () => { if ($("hello").hidden) openHello(); else closeHello(); });
+$("hello").addEventListener("click", ev => {
+  if (ev.target.closest(".tclose")) closeHello();
+  else if (ev.target.closest("[data-emoji]")) sendHello(ev.target.closest("[data-emoji]").dataset.emoji);
 });
 
 // Coming back from the background: don't show a false red "Board offline" while
