@@ -212,7 +212,7 @@ def test_positions_zero_header_timestamp_falls_back_to_fetch_age(fixtures):
     feeds = build_feeds(cfg, FixtureClient(fixtures), clock=clock)
     feeds["positions"].state = state(PositionsSnapshot(0, ()))
     app = create_app(cfg, FixtureClient(fixtures), feeds=feeds, fresh_wait_s=0, start_polling=False,
-                     clock=clock, wall_clock=lambda: 1e12)
+                     clock=clock, wall_clock=lambda: 4e9)   # 2096: any feed timestamp would be old
     with TestClient(app) as c:
         assert c.get("/api/positions").json()["stale"] is False
 
@@ -377,26 +377,47 @@ def test_board_for_another_station(app, fixtures):
 
 
 def test_messages_are_set_from_the_pi_only(fixtures, tmp_path):
+    import json
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
     cfg = config()
     clock = Clock()
+    now = [datetime(2026, 11, 9, 8, 0, tzinfo=ZoneInfo(cfg.board.timezone)).timestamp()]   # a Monday
     feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
     make = lambda: create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
-                              start_polling=False, clock=clock, wall_clock=lambda: 0.0, data_dir=tmp_path)
+                              start_polling=False, clock=clock, wall_clock=lambda: now[0], data_dir=tmp_path)
     defaults = {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}
+    week = {d: defaults for d in ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")}
     with TestClient(make()) as c:
-        assert c.get("/api/messages").json() == {"messages": defaults, "defaults": defaults}
+        assert c.get("/api/messages").json() == {"messages": week, "defaults": defaults, "today": "monday"}
         # through tailscale serve (the phone link): refused
-        r = c.put("/api/messages", json={"message": "hi"}, headers={"X-Forwarded-For": "100.64.0.9"})
+        r = c.put("/api/messages", json={"monday": {"message": "hi"}}, headers={"X-Forwarded-For": "100.64.0.9"})
         assert r.status_code == 403
-        r = c.put("/api/messages", json={"cheer": "hi"}, headers={"Tailscale-User-Login": "her@example.com"})
+        r = c.put("/api/messages", json={"monday": {"cheer": "hi"}}, headers={"Tailscale-User-Login": "her@example.com"})
         assert r.status_code == 403
-        assert c.put("/api/messages", json={"message": "x" * 61}).status_code == 400
-        assert c.put("/api/messages", json={"message": 3}).status_code == 400
+        assert c.put("/api/messages", json={"monday": {"message": "x" * 61}}).status_code == 400
+        assert c.put("/api/messages", json={"monday": {"message": 3}}).status_code == 400
+        assert c.put("/api/messages", json={"monday": {}}).status_code == 400
+        assert c.put("/api/messages", json={"message": "hi"}).status_code == 400
         assert c.put("/api/messages", json={}).status_code == 400
-        r = c.put("/api/messages", json={"message": "  love you,\n  go get 'em  "})
-        assert r.json()["messages"] == {"message": "love you, go get 'em", "cheer": "YAYAYAYAYAY"}
-        assert c.get("/api/positions").json()["wave"]["message"] == "love you, go get 'em"
-    # a restart keeps it; a blank one goes back to the config's
+        # the whole week at once
+        r = c.put("/api/messages", json={"monday": {"message": "  love you,\n  go get 'em  ", "cheer": "mon!"},
+                                         "tuesday": {"message": "taco tuesday", "cheer": "tue!"}})
+        days = r.json()["messages"]
+        assert days["monday"] == {"message": "love you, go get 'em", "cheer": "mon!"}
+        assert days["tuesday"] == {"message": "taco tuesday", "cheer": "tue!"}
+        assert days["wednesday"] == defaults
+        # the map says today's
+        assert c.get("/api/positions").json()["wave"] == {"message": "love you, go get 'em", "cheer": "mon!"}
+        now[0] += 86400
+        assert c.get("/api/positions").json()["wave"] == {"message": "taco tuesday", "cheer": "tue!"}
+        assert c.get("/api/messages").json()["today"] == "tuesday"
+    # a restart keeps them; a blank one goes back to the config's
     with TestClient(make()) as c:
-        assert c.get("/api/messages").json()["messages"]["message"] == "love you, go get 'em"
-        assert c.put("/api/messages", json={"message": ""}).json()["messages"] == defaults
+        assert c.get("/api/messages").json()["messages"]["monday"]["message"] == "love you, go get 'em"
+        days = c.put("/api/messages", json={"monday": {"message": ""}}).json()["messages"]
+        assert days["monday"] == {"message": defaults["message"], "cheer": "mon!"}
+    # one pair saved before there was one per day: every day gets it
+    (tmp_path / "messages.json").write_text(json.dumps({"message": "old", "cheer": "older"}), encoding="utf-8")
+    with TestClient(make()) as c:
+        assert c.get("/api/messages").json()["messages"] == {d: {"message": "old", "cheer": "older"} for d in week}
