@@ -6,6 +6,7 @@ import { arrivalsPanelHtml, alertHtml, commuteAmHtml, commutePmHtml, commuteMode
          commuteCardHtml, nearestStation, pickerListHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute, tripQuery } from "./commute.js";
+import { weatherHeaderHtml, weatherHintsHtml } from "./weather.js";
 
 const $ = id => document.getElementById(id);
 const startMs = Date.now();
@@ -32,6 +33,7 @@ async function poll() {
     $("station").innerHTML = `${escapeHtml(board.station.name)}<span class="caret">▾</span>`;
     renderArrivals(true);
     renderAlerts();
+    renderWeather();
   } catch (err) {
     console.warn("board poll failed", err);
   } finally {
@@ -61,6 +63,7 @@ const commuteShown = () => !!commute && !hidden;
 function renderCommute() {
   const el = $("commute");
   $("cbtn").classList.toggle("on", commuteShown());
+  renderWeather();
   if (!commuteShown()) { el.innerHTML = ""; return; }
   el.innerHTML = (manual ? commuteModeHtml(commute.mode) : "") +
     (commute.mode === "am" ? commuteAmHtml(commute, dest, { tabs: true }) : commutePmHtml(commute, origin));
@@ -90,6 +93,16 @@ $("cbtn").addEventListener("click", () => {
   commutePoller.poll();
 });
 const commutePoller = startCommute(c => { commute = c; renderCommute(); renderAlerts(); }, () => manual);
+
+// The weather: icon + temperature in the sheet header; while the commute panel
+// shows, both hints as one dim line under it.
+function renderWeather() {
+  const w = board?.weather;
+  const html = weatherHeaderHtml(w);
+  $("wxnow").hidden = !html;
+  $("wxnow").innerHTML = html;
+  $("wx").innerHTML = commuteShown() ? weatherHintsHtml(w) : "";
+}
 
 // The board's alerts, plus (while the commute card is up) Red line ones.
 function renderAlerts() {

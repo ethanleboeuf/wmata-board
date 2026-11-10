@@ -115,3 +115,8 @@ body.phone * { box-sizing: border-box; }
 .prow .pstar { width: 48px; background: none; border: 0; color: #5b6573; font-size: 22px; line-height: 1; }
 .prow .pstar.fav { color: #f3d36b; }
 .phead { margin: 10px 4px 2px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #8b95a3; }
+
+/* Weather: icon + temperature in the header; both hints as one dim line under the commute panel. */
+.phone .wx { font-size: 16px; gap: 6px; max-width: none; margin-right: 8px; }
+.phone .wx-ico { margin-right: 3px; }
+.phone #wx .wx-line { font-size: 12px; font-weight: 600; color: #7d8794; padding: 0 0 6px; }

@@ -43,6 +43,87 @@ def test_board_endpoint(app):
     assert len(body["platforms"]) == 2
 
 
+def _weather_app(fixtures, fetch=None, *, with_weather=True):
+    from helpers import ET
+    from wmata_board.fixtures import FixtureWeather
+    cfg = config()
+    clock = Clock()
+    weather = FixtureWeather(fixtures / "weather.json", ET) if with_weather else None
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"),
+                        weather=weather, clock=clock)
+    feeds["arrivals"].state = arrivals_state()
+    feeds["incidents"].state = incidents_state()
+    feeds["station"].state = station_state()
+    feeds["arrivals"].next_at = feeds["incidents"].next_at = 1e9   # not due: only weather could make it wait
+    if fetch is not None:
+        feeds["weather"] = Feed("weather", fetch, 900.0, clock=clock)
+    return create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=2.0,
+                      start_polling=False, clock=clock, wall_clock=lambda: 0.0, weather=weather)
+
+
+def test_no_weather_client_no_feed_and_null(fixtures):
+    app = _weather_app(fixtures, with_weather=False)
+    assert "weather" not in app.state.feeds
+    with TestClient(app) as c:
+        assert c.get("/api/board").json()["weather"] is None
+        assert "weather" not in c.get("/healthz").json()["feeds"]
+
+
+def test_weather_feed_is_demand_gated_and_in_healthz(fixtures):
+    app = _weather_app(fixtures)
+    feed = app.state.feeds["weather"]
+    assert feed.cadence == 900.0 and not feed.wanted()
+    with TestClient(app) as c:
+        body = c.get("/api/board").json()
+        assert feed.wanted()
+        assert body["weather"] is None            # nothing fetched yet
+        assert c.get("/healthz").json()["feeds"]["weather"] == {"age_s": None, "error": None}
+
+
+async def test_board_shows_weather_once_fetched(fixtures):
+    app = _weather_app(fixtures)
+    await app.state.feeds["weather"].step()
+    with TestClient(app) as c:
+        w = c.get("/api/board").json()["weather"]
+    assert set(w) == {"temp", "feels", "icon", "text", "hint", "hints"}
+    assert w["temp"] == 48
+
+
+async def test_slow_weather_never_delays_the_board(fixtures):
+    import time
+
+    import httpx
+
+    async def slow():
+        await asyncio.sleep(5)
+
+    app = _weather_app(fixtures, slow)
+    t0 = time.monotonic()
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            body = (await c.get("/api/board")).json()
+    assert time.monotonic() - t0 < 1.0
+    assert body["weather"] is None
+
+
+async def test_weather_client_closed_on_shutdown(fixtures):
+    closed = []
+
+    class Spy:
+        async def forecast(self):
+            return {}
+
+        async def aclose(self):
+            closed.append(1)
+
+    app = create_app(config(), FixtureClient(fixtures), version="test", start_polling=False, weather=Spy(),
+                     network_loader=FixtureNetwork(fixtures / "network.json"))
+    assert "weather" in app.state.feeds
+    async with app.router.lifespan_context(app):
+        pass
+    assert closed == [1]
+
+
 def test_board_request_marks_feeds_wanted(app):
     feeds = app.state.feeds
     assert not feeds["arrivals"].wanted()

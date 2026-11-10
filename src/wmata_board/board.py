@@ -13,6 +13,7 @@ from .incidents import alerts_for
 from .predictions import platforms_for
 from .service import ServiceStatus, StationData, service_status
 from .state import FeedState
+from .weather import weather_for
 from .wmata import WmataError
 
 STALE_AFTER_S = 60.0
@@ -61,7 +62,8 @@ def _notice(config: Config, arrivals: FeedState, age: float | None, has_trains: 
 
 
 def build_board(*, config: Config, arrivals: FeedState, incidents: FeedState, station: FeedState,
-                now: float, now_local: datetime, version: str, other: dict | None = None) -> dict:
+                now: float, now_local: datetime, version: str, other: dict | None = None,
+                weather: FeedState | None = None) -> dict:
     """`other`: a network station ({"codes", "name"}) to show instead of the
     home one (the phone's picker). It gets every line, the default platform
     labels, all of a transfer station's platforms, and no first/last train."""
@@ -99,6 +101,7 @@ def build_board(*, config: Config, arrivals: FeedState, incidents: FeedState, st
         "notice": notice,
         "alerts": [a.as_json() for a in alerts],
         "service": service.as_json() if service else None,
+        "weather": weather_for(weather, now, now_local) if weather is not None else None,
         "freshness": {
             "arrivals": arrivals.freshness(now, STALE_AFTER_S),
             "incidents": incidents.freshness(now, INCIDENTS_STALE_AFTER_S),

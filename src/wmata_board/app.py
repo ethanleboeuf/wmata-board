@@ -80,11 +80,12 @@ class _NoStoreStaticFiles(StaticFiles):
 def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
                version: str = __version__, fresh_wait_s: float = 3.0,
                start_polling: bool = True, data_dir: Path = DATA_DIR,
-               network_loader=None, schedule_loader=None,
+               network_loader=None, schedule_loader=None, weather=None,
                clock: Callable[[], float] = time.monotonic,
                wall_clock: Callable[[], float] = time.time) -> FastAPI:
     feeds = feeds if feeds is not None else build_feeds(config, client, network_loader=network_loader,
-                                                       schedule_loader=schedule_loader, clock=clock)
+                                                       schedule_loader=schedule_loader, weather=weather,
+                                                       clock=clock)
     poller = Poller(feeds)
     tz = ZoneInfo(config.board.timezone)
 
@@ -97,8 +98,10 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
         finally:
             await poller.stop()
             await client.aclose()
+            if weather is not None:   # its own httpx client
+                await weather.aclose()
 
-    app = FastAPI(title="wmata-board", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app =FastAPI(title="wmata-board", lifespan=lifespan, docs_url=None, redoc_url=None)
     app.state.feeds = feeds
     app.state.hello = None   # her latest hello (hello.py); memory only
     app.state.data_dir = data_dir
@@ -137,9 +140,13 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             if other is None:
                 return JSONResponse({"error": "unknown station"}, status_code=404, headers=NO_STORE)
         await want("arrivals", "incidents")
+        wx = feeds.get("weather")
+        if wx is not None:
+            wx.want()   # never waited on: a slow forecast must not delay the board
         body = build_board(config=config, arrivals=feeds["arrivals"].state,
                            incidents=feeds["incidents"].state, station=feeds["station"].state,
-                           now=clock(), now_local=datetime.now(tz), version=version, other=other)
+                           now=clock(), now_local=datetime.now(tz), version=version, other=other,
+                           weather=wx.state if wx is not None else None)
         return JSONResponse(body, headers=NO_STORE)
 
     @app.get("/api/positions")

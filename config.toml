@@ -17,6 +17,7 @@ timezone = "America/New_York"
 arrivals = 20
 incidents = 60
 positions = 5
+weather = 900                  # Open-Meteo, only while a page is open
 trips = 20                     # live trip predictions, only while a commute panel is up
 idle_after = 90                # a feed is polled only this long after someone last asked
 
@@ -37,6 +38,10 @@ lat = 38.8912                 # 2201 Wilson Blvd
 lon = -77.0862
 message = "have a good day at work!"   # defaults: change them any time from kiosk-selector
 cheer = "YAYAYAYAYAY"                 # (:8445, "Kara's messages"); kept in data/messages.json
+
+[weather]                     # Open-Meteo, no key; the station's neighbourhood, not an address
+lat = 38.89
+lon = -77.09
 
 [server]
 host = "127.0.0.1"

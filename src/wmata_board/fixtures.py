@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import datetime, tzinfo
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +74,32 @@ class FixtureClient:
 
     async def gtfs_static(self) -> bytes:
         raise WmataError("http", "fixtures mode has no GTFS static zip (uses network.json)")
+
+    async def aclose(self) -> None:
+        pass
+
+
+class FixtureWeather:
+    """Stands in for WeatherClient: the recorded forecast with its times
+    shifted to now (whole hours for the hourly rows, so they stay on the hour),
+    so a local run shows weather without the network."""
+
+    def __init__(self, path: Path, tz: tzinfo, clock: Callable[[], datetime] | None = None) -> None:
+        self._path, self._tz = Path(path), tz
+        self._clock = clock or (lambda: datetime.now(tz))
+
+    async def forecast(self) -> Any:
+        try:
+            data = json.loads(self._path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            raise WmataError("http", f"fixture {self._path.name} missing") from None
+        now = self._clock().replace(tzinfo=None, second=0, microsecond=0)
+        then = datetime.fromisoformat(data["current"]["time"])
+        shift = now.replace(minute=0) - then.replace(minute=0)
+        data["current"]["time"] = now.isoformat(timespec="minutes")
+        data["hourly"]["time"] = [(datetime.fromisoformat(t) + shift).isoformat(timespec="minutes")
+                                  for t in data["hourly"]["time"]]
+        return data
 
     async def aclose(self) -> None:
         pass

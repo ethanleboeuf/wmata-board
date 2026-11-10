@@ -3,6 +3,7 @@ import { formatClock, pillState, alertIndex, arrivalsExpired, mergeAlerts } from
 import { arrivalsPanelHtml, alertHtml, commuteAmHtml } from "./render.js";
 import { createMap } from "./map.js";
 import { startCommute } from "./commute.js";
+import { weatherHeaderHtml } from "./weather.js";
 
 const POLL_MS = 5000;
 const $ = id => document.getElementById(id);
@@ -41,7 +42,15 @@ function render() {
   $("station").textContent = board.station.name;
   document.title = board.station.name;
   renderArrivals(true);
+  renderWeather();
   hooks.onBoard.forEach(fn => fn(board));
+}
+
+// Beside the clock: icon, temperature and the hint. Hidden when there is none.
+function renderWeather() {
+  const html = weatherHeaderHtml(board.weather, { hint: true });
+  $("wx").hidden = !html;
+  $("wx").innerHTML = html;
 }
 
 // Re-rendered on a new board or commute, or when the local 10-minute expiry flips.

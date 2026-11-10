@@ -46,6 +46,7 @@ class PollingConfig:
     incidents: float = 60.0
     positions: float = 5.0
     trips: float = 20.0
+    weather: float = 900.0
     idle_after: float = 90.0
 
 
@@ -119,6 +120,13 @@ class CommuteConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class WeatherConfig:
+    """Where to ask Open-Meteo about: the neighbourhood, not an address."""
+    lat: float
+    lon: float
+
+
+@dataclass(frozen=True, slots=True)
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8766
@@ -132,6 +140,7 @@ class Config:
     map: MapConfig
     server: ServerConfig
     commute: CommuteConfig | None = None
+    weather: WeatherConfig | None = None
     api_key: str | None = field(default=None, repr=False)
 
 
@@ -194,7 +203,7 @@ def _platforms(t: Mapping[str, Any]) -> dict[str, dict[str, str]]:
 
 def _polling(t: Mapping[str, Any]) -> PollingConfig:
     values = {}
-    for name in ("arrivals", "incidents", "positions", "trips", "idle_after"):
+    for name in ("arrivals", "incidents", "positions", "trips", "weather", "idle_after"):
         if name in t:
             v = _number(t[name], f"[polling].{name}")
             if v <= 0:
@@ -315,6 +324,19 @@ def _commute(t: Mapping[str, Any]) -> CommuteConfig | None:
     )
 
 
+def _weather(t: Mapping[str, Any]) -> WeatherConfig | None:
+    if not t:
+        return None
+    if not {"lat", "lon"} <= set(t):
+        raise ConfigError("[weather] needs lat and lon")
+    lat, lon = _number(t["lat"], "[weather].lat"), _number(t["lon"], "[weather].lon")
+    if not -90 <= lat <= 90:
+        raise ConfigError(f"[weather].lat must be -90 to 90, got {lat}")
+    if not -180 <= lon <= 180:
+        raise ConfigError(f"[weather].lon must be -180 to 180, got {lon}")
+    return WeatherConfig(lat, lon)
+
+
 def _server(t: Mapping[str, Any]) -> ServerConfig:
     host = str(t.get("host", "127.0.0.1"))
     port = t.get("port", 8766)
@@ -362,5 +384,6 @@ def load_config(path: Path, *, environ: Mapping[str, str] | None = None) -> Conf
         map=_map(_table(raw, "map")),
         server=_server(_table(raw, "server")),
         commute=_commute(_table(raw, "commute")),
+        weather=_weather(_table(raw, "weather")),
         api_key=_api_key(os.environ if environ is None else environ, path.parent / ".env"),
     )

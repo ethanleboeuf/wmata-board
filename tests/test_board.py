@@ -133,3 +133,16 @@ def test_any_station_with_every_platform_of_a_transfer_station():
     assert b["service"] is None and b["notice"] is None
     assert {l for a in b["alerts"] for l in a["lines"]} & {"RD", "BL"}
     assert board(arrivals=state(trains), other={"codes": ["N06"], "name": "Wiehle"})["notice"] == NOTICE_NO_TRAINS
+
+
+def test_weather_in_the_board():
+    from helpers import load
+    from wmata_board.weather import parse_weather
+    snap = parse_weather(load("weather.json"))
+    assert board()["weather"] is None                 # no feed: nothing drawn
+    kw = dict(config=config(), arrivals=arrivals_state(), incidents=incidents_state(), station=station_state(),
+              now_local=NOON, version="v1")
+    assert build_board(now=110.0, weather=FeedState(), **kw)["weather"] is None   # not fetched yet
+    w = build_board(now=110.0, weather=state(snap), **kw)["weather"]
+    assert (w["temp"], w["feels"], w["icon"], w["hints"]) == (48, 43, "☀️", [])   # NOON: daytime
+    assert build_board(now=100.0 + 3601, weather=state(snap), **kw)["weather"] is None   # an hour old

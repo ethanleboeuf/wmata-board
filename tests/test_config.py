@@ -82,6 +82,12 @@ def test_station_codes_are_uppercased(tmp_path):
     ('[map]\ntheme = "christmas"\n', "theme"),
     ('[map.wave]\nlat = 38.9\n', "wave"),
     ('[server]\nport = 70000\n', "port"),
+    ('[weather]\nlat = 38.9\n', "lat and lon"),
+    ('[weather]\nlat = "north"\nlon = -77\n', "lat"),
+    ('[weather]\nlat = true\nlon = -77\n', "lat"),
+    ('[weather]\nlat = 91\nlon = -77\n', "lat"),
+    ('[weather]\nlat = 38.9\nlon = -181\n', "lon"),
+    ('[polling]\nweather = 0\n', "weather"),
     ('[board\n', "config.toml"),
 ])
 def test_bad_values_raise(tmp_path, text, match):
@@ -155,3 +161,21 @@ def test_commute_lines(tmp_path):
     assert load_config(REPO / "config.toml", environ={}).commute.lines == ("OR", "SV", "RD")
     with pytest.raises(ConfigError, match="unknown line"):
         load_config(write(tmp_path, '[commute]\nlines = ["RED"]\n'), environ={})
+
+
+def test_repo_weather_config():
+    config = load_config(REPO / "config.toml", environ={})
+    assert (config.weather.lat, config.weather.lon) == (38.89, -77.09)
+    assert config.polling.weather == 900
+
+
+def test_weather_is_optional(tmp_path):
+    config = load_config(write(tmp_path, ""), environ={})
+    assert config.weather is None
+    assert config.polling.weather == 900
+
+
+def test_weather_table(tmp_path):
+    config = load_config(write(tmp_path, "[weather]\nlat = 39\nlon = -77.5\n[polling]\nweather = 600\n"), environ={})
+    assert (config.weather.lat, config.weather.lon) == (39.0, -77.5)
+    assert config.polling.weather == 600

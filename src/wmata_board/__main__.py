@@ -16,9 +16,10 @@ import uvicorn
 from . import __version__
 from .app import DATA_DIR, PROJECT_ROOT, create_app
 from .config import ConfigError, load_config
-from .fixtures import FixtureClient
+from .fixtures import FixtureClient, FixtureWeather
 from .network import FixtureNetwork, NetworkCache
 from .trips import FixtureSchedule, build_schedule
+from .weather import WeatherClient
 from .wmata import WmataClient
 
 DEFAULT_CONFIG = PROJECT_ROOT / "config.toml"
@@ -76,11 +77,18 @@ def main(argv: list[str] | None = None) -> int:
         if config.api_key is None:
             log.warning("no WMATA_API_KEY set: the board will say so until one is configured")
 
+    weather = None   # its own client, never WmataClient: that one carries the API key
+    if config.weather is not None:
+        if args.fixtures:
+            weather = FixtureWeather(args.fixtures / "weather.json", ZoneInfo(config.board.timezone))
+        else:
+            weather = WeatherClient(config.weather.lat, config.weather.lon)
+
     host = args.host or config.server.host
     port = args.port or config.server.port
     log.info("wmata-board on http://%s:%d/ (station %s)", host, port, config.board.station)
     uvicorn.run(create_app(config, client, version=build_version(), network_loader=network_loader,
-                           schedule_loader=schedule_loader),
+                           schedule_loader=schedule_loader, weather=weather),
                 host=host, port=port, log_level=args.log_level, access_log=False)
     return 0
 

@@ -355,3 +355,13 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 @keyframes hello-bubble {
   0% { transform: scale(.8); opacity: 0; } 2%, 94% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; }
 }
+
+/* The weather for the walk, in the header's right-hand group: smaller than the
+   clock, the hint dimmer, one line that never wraps or pushes the station name. */
+.hdr .stn { flex: none; }
+.hdr .right { min-width: 0; }
+.wx { display: flex; align-items: baseline; gap: 1cqw; min-width: 0; max-width: 40cqw; white-space: nowrap;
+      font-size: 2cqw; font-weight: 600; color: #cfd6df; font-variant-numeric: tabular-nums; }
+.wx[hidden] { display: none; }
+.wx-ico { margin-right: .4cqw; }
+.wx-hint { font-size: 1.5cqw; color: #8b95a3; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
