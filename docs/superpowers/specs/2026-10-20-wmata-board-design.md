@@ -318,11 +318,57 @@ From her first rides with "I'm on this one":
   so a pan doesn't reshuffle it), bubble `cheer` ("YAYAYAYAYAY"). Before
   noon it's still the wave (`wave.js` `waveMode`).
 
+## A wave back (added 2026-11-09)
+
+- The wave went one way (home to her). Now the phone has a 💗 button under
+  recenter: a row of emoji (💗 👋 😘 🥳 😴 ☕ 🐀) and an optional note of up to
+  40 characters; tapping an emoji sends it, riding or not.
+- `POST /api/hello {emoji, text}` (`hello.py`; 400 for anything else) keeps
+  the one hello in memory for 60 s -- no file, it's gone on a restart.
+  `/api/positions` carries it as `hello: {id, emoji, text, age_s}` (age, not
+  an epoch time, so a phone with a wrong clock still behaves); the emoji list
+  comes with `/api/network` as `hello_emoji`.
+- Every open map plays each id once (`hello.js`), her own included so she
+  sees it went out: a dozen emoji float up from her train if she's riding
+  and it's drawn, else from the first landmark (the hospital), with the note
+  in a bubble beside it for the rest of the 60 s, and a few more rise over
+  the `[map.wave]` point at home. They live in their own HTML layer, animated
+  by transform and opacity only, and are removed when done.
+- The wall only shows it while the kiosk is on the metro board.
+
+## Weather for the walk (added 2026-11-09)
+
+- Optional `[weather] lat, lon` in config.toml (no table: no feed, nothing
+  drawn); `[polling].weather`, 900 s. The source is Open-Meteo, which needs
+  no key. The request goes out on its own httpx client (`weather.py`), never
+  the WMATA one, so the API key is not sent along; it carries only a generic
+  User-Agent and the coordinates rounded to 2 decimals -- the station's
+  neighbourhood, not the address.
+- A demand-gated `weather` feed; `/api/board` marks it wanted but never waits
+  on it (the first board after idle has `weather: null`). The body gains
+  `weather: {temp, feels, icon, text, hint, hints}` in °F, null when the
+  forecast is over an hour old.
+- Hints look at the next 3 hours, at most two, most important first: rain or
+  snow at 50 % or more ("☔ Rain likely by 8 AM", "Rain now"), feels like
+  40° or colder (🧥; 25° or colder 🧣), 90° or hotter (🥵), wind 20 mph or
+  more (💨). The cold, heat and wind ones use the current reading.
+- Wall: icon, temperature and the first hint before the clock. Phone: icon
+  and temperature in the sheet header, and both hints on a line under the
+  commute panel while it's up.
+- Fixtures mode replays `tests/fixtures/weather.json` restamped to now.
+
 ## Out of scope (for now)
 
 Bus panel (designed for: a second `platforms`-like panel fed by
-`NextBusService.svc/json/jPredictions`), elevator outages, crowding (the
-GTFS-RT feed carries occupancy), multi-station layouts.
+`NextBusService.svc/json/jPredictions`), elevator outages, multi-station
+layouts.
+
+Crowding: the GTFS-RT positions feed sets `occupancy_status` on every train,
+but always to `EMPTY` (91 of 91 trains at 10:51 on a weekday, and again on
+2026-11-09), so it is a placeholder. Dots estimated from the gap since the
+previous train and the car count were built and dropped the same day (branch
+`worktree-agent-a9189b78e992fdaad`): an estimate wasn't wanted. Worth
+another look if WMATA starts filling the field in.
 
 ## Needs from Ethan
 
