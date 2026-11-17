@@ -234,7 +234,8 @@ def test_positions_before_first_fetch(app):
         body = c.get("/api/positions").json()
     assert body == {"fetched_at": None, "feed_timestamp": None, "age_s": None, "stale": True,
                     "error": None, "vehicles": [], "ride": None,
-                    "wave": {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}, "hello": None}
+                    "wave": {"message": "have a good day at work!", "cheer": "YAYAYAYAYAY"}, "white_dog": True,
+                    "hello": None}
 
 
 def test_network_endpoint(app, fixtures):
@@ -531,3 +532,21 @@ def test_hello_is_shared_through_positions(fixtures):
         now[0] = 1061.0
         assert c.get("/api/positions").json()["hello"] is None
         assert c.get("/api/hello").json() == {"hello": None}
+
+def test_white_dog_is_switched_from_the_pi_only(fixtures, tmp_path):
+    cfg = config()
+    clock = Clock()
+    feeds = build_feeds(cfg, FixtureClient(fixtures), network_loader=FixtureNetwork(fixtures / "network.json"), clock=clock)
+    make = lambda: create_app(cfg, FixtureClient(fixtures), feeds=feeds, version="test", fresh_wait_s=0,
+                              start_polling=False, clock=clock, data_dir=tmp_path)
+    with TestClient(make()) as c:
+        assert c.get("/api/white-dog").json() == {"on": True}
+        assert c.put("/api/white-dog", json={"on": False}, headers={"X-Forwarded-For": "100.64.0.9"}).status_code == 403
+        assert c.put("/api/white-dog", json={"on": "no"}).status_code == 400
+        assert c.put("/api/white-dog", json={}).status_code == 400
+        assert c.put("/api/white-dog", json={"on": False}).json() == {"on": False}
+        assert c.get("/api/positions").json()["white_dog"] is False
+    with TestClient(make()) as c:   # kept across a restart
+        assert c.get("/api/white-dog").json() == {"on": False}
+        assert c.put("/api/white-dog", json={"on": True}).json() == {"on": True}
+        assert c.get("/api/positions").json()["white_dog"] is True

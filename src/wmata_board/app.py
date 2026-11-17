@@ -24,7 +24,8 @@ from .commute import AM, PM, RideMemory, build_commute, commute_mode, commute_st
 from .config import Config
 from .feeds import build_feeds
 from .hello import HELLO_EMOJI, hello_age_s, hello_showing, parse_hello
-from .messages import DAYS, Words, from_tailnet, load_messages, parse_messages, save_messages
+from .messages import (DAYS, Words, from_tailnet, load_messages, load_white_dog, parse_messages,
+                       parse_white_dog, save_messages, save_white_dog)
 from .poller import Feed, Poller
 from .positions import POSITIONS_STALE_AFTER_S
 from .ride import load_ride, moved_ride, parse_ride, ride_trip, ride_trips, save_ride
@@ -112,6 +113,8 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     default_messages = Words(wave.message, wave.cheer) if wave else None
     messages_path = data_dir / "messages.json"
     app.state.messages = load_messages(messages_path, default_messages) if wave else None
+    white_dog_path = data_dir / "white_dog.json"
+    app.state.white_dog = load_white_dog(white_dog_path)
 
     def todays_words() -> dict:
         return app.state.messages.on(datetime.fromtimestamp(wall_clock(), tz).weekday()).as_json()
@@ -166,6 +169,7 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             "vehicles": [v.as_json() for v in snap.vehicles] if snap else [],
             "ride": ride_trip(app.state.ride, wall_clock()),
             "wave": app.state.messages and todays_words(),
+            "white_dog": app.state.white_dog,
             "hello": showing_hello(),
         }, headers=NO_STORE)
 
@@ -216,6 +220,22 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
             return JSONResponse({"error": str(err)}, status_code=400, headers=NO_STORE)
         save_messages(messages_path, app.state.messages)
         return messages_body()
+
+    # The little white dog spinning beside them (wave.js): on or off, set only from the Pi.
+    @app.get("/api/white-dog")
+    async def get_white_dog():
+        return JSONResponse({"on": app.state.white_dog}, headers=NO_STORE)
+
+    @app.put("/api/white-dog")
+    async def put_white_dog(request: Request):
+        if from_tailnet(request.headers):
+            return JSONResponse({"error": "set this from kiosk-selector"}, status_code=403, headers=NO_STORE)
+        try:
+            app.state.white_dog = parse_white_dog(await request.json())
+        except ValueError as err:   # includes a body that isn't JSON
+            return JSONResponse({"error": str(err)}, status_code=400, headers=NO_STORE)
+        save_white_dog(white_dog_path, app.state.white_dog)
+        return JSONResponse({"on": app.state.white_dog}, headers=NO_STORE)
 
     # The easter egg: the phone's "I'm on this one" (see ride.py).
     def ride_body() -> JSONResponse:

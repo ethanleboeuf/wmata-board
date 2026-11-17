@@ -209,7 +209,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
     }
     if (waving) {
       const [x, y] = project(net.wave.lon, net.wave.lat);
-      out.push(waving === "cheer" ? cheerHtml(x, y, net.wave.cheer) : waveHtml(x, y, net.wave.message));
+      out.push(waving === "cheer" ? cheerHtml(x, y, net.wave.cheer, whiteDog) : waveHtml(x, y, net.wave.message, whiteDog));
     }
     gStatic.innerHTML = out.join("");
   }
@@ -219,6 +219,7 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
   const els = new Map();
   const info = new Map();   // vehicle id -> {line, cars, trip_id} from the last snapshot
   let stale = true, riding = null, waving = null;   // waving: wave.js waveMode
+  let whiteDog = false;   // the little white dog beside them, switched from kiosk-selector
   let lastGoodMs = performance.now();
 
   function setStale(v) {
@@ -260,6 +261,8 @@ export async function createMap(el, { interactive = false, fit = "cover", paddin
         playHello(body.hello);
         const wave = net.wave ? waveMode(riding) : null;
         if (wave !== waving) { waving = wave; scheduleDraw(); }
+        const dog = body.white_dog === true;
+        if (dog !== whiteDog) { whiteDog = dog; if (waving) scheduleDraw(); }
         const said = body.wave;   // his words, set from kiosk-selector since the page loaded
         if (said && net.wave && (said.message !== net.wave.message || said.cheer !== net.wave.cheer)) {
           Object.assign(net.wave, said);

@@ -69,6 +69,20 @@ const DOG = `<g class="dog">` +
   `<g class="planet"><circle cx="9" cy="-4.9" r=".85"/><ellipse class="ring" cx="9" cy="-4.9" rx="1.5" ry=".42" transform="rotate(-20 9 -4.9)"/></g>` +
   `</g>`;
 
+// A small fluffy white dog on his other side, facing him, too excited to
+// stand still: board.css spins it in circles (the inner group) while she rides.
+const WHITE_DOG = `<g class="whitedog" transform="translate(-12,0)"><g class="spin">` +
+  `<path class="leg" d="M-2.2,-2.4 L-2.3,0 M-1,-2.4 L-.9,0 M1.2,-2.4 L1.1,0 M2.4,-2.4 L2.6,0"/>` +
+  `<path class="tail" d="M-3.1,-4.2 Q-5.3,-5 -4.6,-7.4"/>` +
+  `<ellipse class="fur" cx="0" cy="-3.7" rx="3.5" ry="2"/>` +
+  `<circle class="fur" cx="3.3" cy="-6.3" r="1.9"/>` +
+  `<ellipse class="fur" cx="5" cy="-5.8" rx="1.15" ry=".85"/>` +
+  `<circle class="nose" cx="6.05" cy="-5.9" r=".42"/>` +
+  `<path class="ear" d="M2.5,-7.9 Q1.2,-7.4 1.9,-5.2 Q2.9,-6.3 2.5,-7.9 Z"/>` +
+  `<circle class="dogeye" cx="3.9" cy="-6.7" r=".36"/>` +
+  `<path class="collar" d="M1.6,-4.8 L2.3,-6.9"/>` +
+  `</g></g>`;
+
 const f = v => v.toFixed(1);
 
 export const textPx = line => [...line].reduce((px, c) => px + (/[A-Z]/.test(c) ? CAP_PX : CHAR_PX), 0);
@@ -104,10 +118,12 @@ export function confetti(x, y) {
 
 // They stand just below the point (home is a block from the station dot,
 // which would cover them).
-const pair = (x, y, man) => `<g transform="translate(${f(x + 2)},${f(y + 92)}) scale(2.4)">${man}${DOG}</g>`;
+// `whiteDog`: the little white dog joins them (kiosk-selector turns it on and off).
+const pair = (x, y, man, whiteDog) =>
+  `<g transform="translate(${f(x + 2)},${f(y + 92)}) scale(2.4)">${whiteDog ? WHITE_DOG : ""}${man}${DOG}</g>`;
 
-export const waveHtml = (x, y, message) =>
-  `<g class="wave-home">${pair(x, y, MAN)}${bubble(x, y, message)}</g>`;
+export const waveHtml = (x, y, message, whiteDog = false) =>
+  `<g class="wave-home">${pair(x, y, MAN, whiteDog)}${bubble(x, y, message)}</g>`;
 
-export const cheerHtml = (x, y, message) =>
-  `<g class="wave-home cheer">${pair(x, y, DANCER)}${confetti(x, y)}${bubble(x, y, message)}</g>`;
+export const cheerHtml = (x, y, message, whiteDog = false) =>
+  `<g class="wave-home cheer">${pair(x, y, DANCER, whiteDog)}${confetti(x, y)}${bubble(x, y, message)}</g>`;

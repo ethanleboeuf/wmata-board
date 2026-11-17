@@ -96,6 +96,30 @@ def load_messages(path: Path, defaults: Words) -> Messages:
     return Messages(tuple(_load_words(saved.get(d), defaults) for d in DAYS))
 
 
+def parse_white_dog(body: object) -> bool:
+    """{"on": true|false}: whether the little white dog spins beside them."""
+    if not isinstance(body, dict) or not isinstance(body.get("on"), bool):
+        raise ValueError('expected {"on": true} or {"on": false}')
+    return body["on"]
+
+
+def load_white_dog(path: Path) -> bool:
+    """On unless it's been switched off."""
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return True
+    return not (isinstance(saved, dict) and saved.get("on") is False)
+
+
+def save_white_dog(path: Path, on: bool) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"on": on}), encoding="utf-8")
+    except OSError:
+        pass   # it still holds until a restart
+
+
 def save_messages(path: Path, messages: Messages) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

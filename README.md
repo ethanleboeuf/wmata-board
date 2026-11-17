@@ -51,6 +51,11 @@ week at once from kiosk-selector (https://raspberrypi.tail7b0b4d.ts.net:8445,
 words within seconds; they're kept in `data/messages.json`, and a blank one goes
 back to the config's.
 
+A little white dog spins in circles beside them, too excited to stand still.
+Switch it on or off from kiosk-selector ("White dog"), which calls
+`PUT /api/white-dog` with `{"on": true|false}` (Pi-only, like the messages).
+It's on unless switched off, and the setting is kept in `data/white_dog.json`.
+
 ## Pi setup
 
 ```

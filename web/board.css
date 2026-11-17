@@ -105,6 +105,34 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .overlay .wave-home .dog .planet .ring { fill: none; stroke: #8fd3ff; stroke-width: .3; }
 .overlay .wave-home .dog .tail { fill: none; stroke: #121212; stroke-width: 1.2; transform-box: fill-box; transform-origin: 0 100%;
                                  animation: rider-wave .35s ease-in-out infinite alternate; }
+/* The little white dog: chasing its tail round a small circle, flipping to face
+   the way it's running (scaleX through 0 reads as turning), hopping as it goes. */
+.overlay .wave-home .whitedog { filter: drop-shadow(0 0 .6px #0f151d) drop-shadow(0 0 .6px #0f151d); }
+.overlay .wave-home .whitedog .fur { fill: #fbfaf5; }
+.overlay .wave-home .whitedog .ear { fill: #e4ded2; }
+.overlay .wave-home .whitedog .leg { fill: none; stroke: #fbfaf5; stroke-width: 1.1; }
+.overlay .wave-home .whitedog .tail { fill: none; stroke: #fbfaf5; stroke-width: 1.1; transform-box: fill-box; transform-origin: 100% 100%;
+                                      animation: rider-wave .14s ease-in-out infinite alternate; }
+.overlay .wave-home .whitedog .nose { fill: #111; }
+.overlay .wave-home .whitedog .dogeye { fill: #111; }
+.overlay .wave-home .whitedog .collar { fill: none; stroke: #ff5a8a; stroke-width: .9; }
+.overlay .wave-home .whitedog .spin { transform-box: fill-box; transform-origin: 50% 100%; animation: whitedog-spin 1s linear infinite; }
+/* Round a little loop: right along the front, a quick turn, back left along the
+   far side (a touch higher), another quick turn. Hops all the way. */
+@keyframes whitedog-spin {
+  0%   { transform: translate(-3px, -.4px) scaleX(1); }
+  10%  { transform: translate(-1.6px, -1.6px) scaleX(1); }
+  20%  { transform: translate(0, -.2px) scaleX(1); }
+  30%  { transform: translate(1.6px, -1.6px) scaleX(1); }
+  38%  { transform: translate(3px, -.6px) scaleX(1); }
+  46%  { transform: translate(3px, -1.4px) scaleX(-1); }
+  56%  { transform: translate(1.6px, -2.8px) scaleX(-1); }
+  66%  { transform: translate(0, -1.4px) scaleX(-1); }
+  76%  { transform: translate(-1.6px, -2.8px) scaleX(-1); }
+  84%  { transform: translate(-3px, -1.4px) scaleX(-1); }
+  92%  { transform: translate(-3px, -.6px) scaleX(1); }
+  100% { transform: translate(-3px, -.4px) scaleX(1); }
+}
 .overlay .wave-home .bubble { fill: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 .overlay .wave-home text { font-size: 13px; font-weight: 800; fill: #1a1f27; }
 /* Her ride home: he bounces with both arms pumping, the dog hops, confetti falls. */

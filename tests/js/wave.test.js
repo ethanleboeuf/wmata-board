@@ -62,3 +62,13 @@ test("he wears a Nationals jersey and the dog a space collar, morning and aftern
     assert.equal((svg.match(/class="sleeve"/g) || []).length, 2);
   }
 });
+
+test("the little white dog spins beside them only when it's switched on", () => {
+  for (const draw of [waveHtml, cheerHtml]) {
+    assert.doesNotMatch(draw(100, 200, "hi"), /whitedog/);
+    const svg = draw(100, 200, "hi", true);
+    assert.equal((svg.match(/</g) || []).length, (svg.match(/>/g) || []).length);
+    assert.match(svg, /class="whitedog"[^>]*><g class="spin">/);
+    assert.match(svg, /class="dog"/);   // the black dog stays
+  }
+});
