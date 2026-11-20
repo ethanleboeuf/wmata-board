@@ -56,7 +56,6 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .crow { display: grid; align-items: center; border-bottom: 0.2cqw solid #1c222b; height: 8cqw;
         font-variant-numeric: tabular-nums; }
 .crow:last-child { border-bottom: none; }
-.crow.am { grid-template-columns: 8.8cqw 21.6cqw 1fr 15.2cqw 20.8cqw 9.2cqw; }
 .crow.pm { grid-template-columns: 17.2cqw 16cqw 1fr 8.8cqw 16cqw 9.2cqw; }
 .crow.pm.station { grid-template-columns: 17.2cqw 1fr 8.8cqw 16cqw 9.2cqw; }
 .crow .chip { width: 6.4cqw; height: 6.4cqw; font-size: 2.6cqw; }
@@ -81,8 +80,6 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .crow.riding { background: linear-gradient(90deg, rgba(247,168,192,.22) 0, rgba(247,168,192,.06) 100%);
   box-shadow: inset 0.6cqw 0 0 #f7a8c0; }
 .rtag { justify-self: end; font-size: 3.6cqw; line-height: 1; }
-.sched { justify-self: end; font-size: 1.8cqw; font-weight: 700; letter-spacing: 0.24cqw; text-transform: uppercase;
-         color: #5d6875; border: 0.16cqw solid #3b4a5e; border-radius: 0.6cqw; padding: 0.2cqw 0.8cqw; }
 .ctabs { display: flex; gap: 1.2cqw; margin: 0.4cqw 0 1.2cqw; }
 .ctab { font: inherit; font-size: 2.4cqw; font-weight: 700; color: #aab3c0; background: transparent;
         border: 0.2cqw solid #2a313c; border-radius: 99px; padding: 0.6cqw 2.2cqw; }
@@ -96,4 +93,5 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 /* The board's fixed commute columns leave 1fr too narrow here; give every column room. */
 .crow.am { grid-template-columns: 8cqw 19cqw 16cqw 14cqw 18cqw 13cqw; }
 .crow.chead { font-size: 1.7cqw; letter-spacing: 0; }
-.sched { font-size: 1.5cqw; padding: .2cqw .6cqw; }
+.sched { justify-self: end; font-size: 1.5cqw; font-weight: 700; letter-spacing: 0.24cqw; text-transform: uppercase;
+         color: #5d6875; border: 0.16cqw solid #3b4a5e; border-radius: 0.6cqw; padding: 0.2cqw 0.6cqw; }

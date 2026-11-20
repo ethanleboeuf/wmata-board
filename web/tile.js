@@ -19,6 +19,15 @@ export function tileBoard(board, { size, platform }) {
 
 export const showCommute = (commute, { size }) => size === "half" && commute?.mode === "am";
 
+// Heartbeat gate: the arrivals feed must have succeeded at least once (age_s is
+// null when it never has: no/bad key, still loading) and not be expired. Stale
+// but under the 10-minute expiry still beats on purpose: the board shows its
+// last minutes and a reload can't fix a WMATA outage.
+export function shouldBeat(board, nowMs, lastOkMs) {
+  const age = board?.freshness?.arrivals?.age_s;
+  return age !== null && age !== undefined && !arrivalsExpired({ nowMs, lastOkMs, arrivalsAgeS: age });
+}
+
 if (typeof document !== "undefined") {
   const POLL_MS = 5000;
   const opts = tileOptions(location.search);
@@ -64,8 +73,8 @@ if (typeof document !== "undefined") {
       else if (board.version !== version) { location.reload(); return; }
       renderArrivals();
       updateAlerts();
-      // Success path only: fresh data, not the "unavailable" notice.
-      if (!expired()) window.parent.postMessage({ kioskTile: "alive" }, "*");
+      // Success path only: see shouldBeat.
+      if (shouldBeat(board, Date.now(), lastOkMs)) window.parent.postMessage({ kioskTile: "alive" }, "*");
     } catch (err) {
       console.warn("board poll failed", err);
     } finally {

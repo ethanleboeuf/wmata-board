@@ -321,6 +321,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .maplibregl-ctrl-attrib a { color: #4d5866 !important; }
 
 /* Commute panel (mornings on the wall, in place of the westbound list). */
+/* tile.css carries a 2x-cqw copy of the commute styles below; keep them in step. */
 .commute h2 { font-size: 1.45cqw; font-weight: 700; color: #f7c3cc; letter-spacing: .3cqw; text-transform: uppercase;
               margin: 1.6cqw 0 .3cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crow { display: grid; align-items: center; border-bottom: .1cqw solid #1c222b; height: 4cqw;
