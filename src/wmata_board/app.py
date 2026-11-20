@@ -356,6 +356,11 @@ def create_app(config: Config, client, *, feeds: dict[str, Feed] | None = None,
     async def index():
         return FileResponse(WEB_DIR / "index.html", headers=NO_STORE)
 
+    @app.get("/tile")
+    async def tile():
+        """Half / quarter views for the kiosk's split-screen layouts (?size=, ?platform=)."""
+        return FileResponse(WEB_DIR / "tile.html", headers=NO_STORE)
+
     @app.get("/phone")
     async def phone():
         return FileResponse(WEB_DIR / "phone.html", headers=NO_STORE)

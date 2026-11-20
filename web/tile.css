@@ -1,0 +1,99 @@
+@font-face { font-family: Inter; font-weight: 500; src: url(fonts/inter-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 600; src: url(fonts/inter-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2) format("woff2"); }
+
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+/* Fixed tile: 960 wide, 1080 (half) or 540 (quarter) tall, never scaled. Sizes are
+   cqw doubled from board.css (that stage is 1920 wide), so type matches the wall board. */
+#stage { position: absolute; left: 0; top: 0; width: 960px; container-type: inline-size; background: #0d1117;
+         font-family: Inter, Helvetica, Arial, sans-serif; color: #f2f4f7; display: flex; flex-direction: column;
+         overflow: hidden; }
+#stage.half { height: 1080px; }
+#stage.quarter { height: 540px; }
+#stage * { box-sizing: border-box; }
+
+.hdr { display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw;
+       border-bottom: .4cqw solid #2a313c; padding: 2.4cqw 4cqw 1.4cqw; flex: none; }
+.stn { font-size: 4.2cqw; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quarter .stn { font-size: 3.6cqw; }
+.right { display: flex; align-items: baseline; gap: 2cqw; flex: none; }
+.clk { font-size: 4cqw; font-weight: 600; color: #aab3c0; font-variant-numeric: tabular-nums; }
+.pill { font-size: 2cqw; font-weight: 700; padding: .6cqw 1.6cqw; border-radius: 99px; align-self: center; }
+.pill.amber { background: #3a2e10; color: #ffd166; border: .2cqw solid #ffd166; }
+.pill.red { background: #3a1214; color: #ff6b6b; border: .2cqw solid #ff6b6b; }
+
+.arr { flex: 1; min-height: 0; padding: 0 4cqw; overflow: hidden; }
+.plat h2 { font-size: 2.6cqw; font-weight: 700; color: #8b95a3; letter-spacing: .5cqw; text-transform: uppercase;
+           margin: 2.6cqw 0 .6cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quarter .plat h2 { display: none; }   /* the header carries the platform's label */
+.row { display: grid; grid-template-columns: 9.4cqw 1fr 17cqw; align-items: center;
+       border-bottom: .2cqw solid #1c222b; height: 9.6cqw; }
+.quarter .row { height: 12cqw; }
+.row:last-child { border-bottom: none; }
+.row.empty { display: block; height: auto; padding: 2.4cqw 0; font-size: 3.2cqw; font-weight: 600; color: #5d6875; }
+.chip { width: 7.2cqw; height: 7.2cqw; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 3cqw; font-weight: 800; }
+.dest { font-weight: 700; font-size: 4.6cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cars { font-size: 2.4cqw; font-weight: 600; color: #7d8794; display: block; }
+.min { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 6.4cqw; }
+.min small { font-size: 2.6cqw; font-weight: 600; color: #8b95a3; margin-left: .6cqw; }
+.min.now { color: #ffd166; }
+.notice { margin-top: 8cqw; font-size: 4.4cqw; font-weight: 700; color: #aab3c0; line-height: 1.35; }
+
+.alert { display: flex; align-items: center; gap: 2cqw; background: #f5a623; color: #111; padding: 1.4cqw 4cqw; flex: none; }
+.alert[hidden] { display: none; }
+.alert .tag { background: #111; color: #f5a623; font-weight: 800; font-size: 2cqw; letter-spacing: .4cqw;
+              padding: .6cqw 1.4cqw; border-radius: .7cqw; flex: none; }
+.alert .achips { display: flex; gap: .8cqw; flex: none; }
+.chip.sm { width: 4cqw; height: 4cqw; font-size: 1.8cqw; }
+.alert .atext { font-size: 2.6cqw; font-weight: 700; line-height: 1.3; display: -webkit-box;
+                -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Commute panel (mornings on the wall, in place of the westbound list). */
+.commute h2 { font-size: 2.9cqw; font-weight: 700; color: #f7c3cc; letter-spacing: 0.6cqw; text-transform: uppercase;
+              margin: 3.2cqw 0 0.6cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow { display: grid; align-items: center; border-bottom: 0.2cqw solid #1c222b; height: 8cqw;
+        font-variant-numeric: tabular-nums; }
+.crow:last-child { border-bottom: none; }
+.crow.am { grid-template-columns: 8.8cqw 21.6cqw 1fr 15.2cqw 20.8cqw 9.2cqw; }
+.crow.pm { grid-template-columns: 17.2cqw 16cqw 1fr 8.8cqw 16cqw 9.2cqw; }
+.crow.pm.station { grid-template-columns: 17.2cqw 1fr 8.8cqw 16cqw 9.2cqw; }
+.crow .chip { width: 6.4cqw; height: 6.4cqw; font-size: 2.6cqw; }
+.crow.chead .r { text-align: right; }
+.crow.chead { height: auto; padding-bottom: 0.6cqw; white-space: nowrap; font-size: 2cqw; font-weight: 700; color: #5d6875;
+              letter-spacing: 0.16cqw; text-transform: uppercase; }
+.crow.cempty { display: block; height: auto; padding: 2.4cqw 0; font-size: 3.6cqw; font-weight: 600; color: #5d6875; }
+.ct { font-size: 5.2cqw; font-weight: 800; }
+.ct.dim { color: #aab3c0; font-weight: 700; }
+.cw { font-size: 5.2cqw; font-weight: 800; }
+.cw small, .cs small, .ct small { font-size: 2.4cqw; font-weight: 600; color: #8b95a3; margin-left: 0.6cqw; }
+.cw.w-short { color: #5ee08a; }
+.cw.w-long { color: #ffd166; }
+.cs { font-size: 5.2cqw; font-weight: 800; text-align: right; }
+.crow.target { background: linear-gradient(90deg, rgba(247,195,204,0) 0, rgba(247,195,204,.08) 100%); }
+.crow.target .cs { color: #f7c3cc; }
+.crow.late { opacity: .4; }
+.cnote { padding: 0.6cqw 0 1cqw; font-size: 2.6cqw; font-weight: 700; color: #f7a8c0; border-bottom: 0.2cqw solid #1c222b; }
+.cleave { font-size: 4.4cqw; font-weight: 600; color: #e6ebf1; margin: 0.4cqw 0 1.2cqw; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.cleave b { font-weight: 800; color: #f7c3cc; }
+.crow.riding { background: linear-gradient(90deg, rgba(247,168,192,.22) 0, rgba(247,168,192,.06) 100%);
+  box-shadow: inset 0.6cqw 0 0 #f7a8c0; }
+.rtag { justify-self: end; font-size: 3.6cqw; line-height: 1; }
+.sched { justify-self: end; font-size: 1.8cqw; font-weight: 700; letter-spacing: 0.24cqw; text-transform: uppercase;
+         color: #5d6875; border: 0.16cqw solid #3b4a5e; border-radius: 0.6cqw; padding: 0.2cqw 0.8cqw; }
+.ctabs { display: flex; gap: 1.2cqw; margin: 0.4cqw 0 1.2cqw; }
+.ctab { font: inherit; font-size: 2.4cqw; font-weight: 700; color: #aab3c0; background: transparent;
+        border: 0.2cqw solid #2a313c; border-radius: 99px; padding: 0.6cqw 2.2cqw; }
+.ctab.on { background: #f7c3cc; border-color: #f7c3cc; color: #111; }
+/* Morning half: the commute panel sits under both directions, so their rows tighten. */
+.arr.with-commute .row:not(.empty) { height: 7cqw; }
+.arr.with-commute .chip { width: 5.4cqw; height: 5.4cqw; font-size: 2.2cqw; }
+.arr.with-commute .dest { font-size: 3.8cqw; }
+.arr.with-commute .min { font-size: 5cqw; }
+.arr.with-commute .plat h2 { margin-top: 1.6cqw; }
+/* The board's fixed commute columns leave 1fr too narrow here; give every column room. */
+.crow.am { grid-template-columns: 8cqw 19cqw 16cqw 14cqw 18cqw 13cqw; }
+.crow.chead { font-size: 1.7cqw; letter-spacing: 0; }
+.sched { font-size: 1.5cqw; padding: .2cqw .6cqw; }

@@ -147,6 +147,12 @@ def test_index_served(app):
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
 
 
+def test_tile_served(app):
+    with TestClient(app) as c:
+        r = c.get("/tile?size=quarter&platform=1")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+
+
 async def test_first_request_after_idle_waits_for_fresh_data(fixtures):
     """Review focus 3: switching to the board must not show stale minutes for 5 s."""
     cfg = config()
